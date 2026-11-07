@@ -35,11 +35,19 @@ class AppendClip(StrictModel):
     start: Frame
     end: Frame
     media_type: Literal[1, 2] = 1
+    record_frame: Frame | None = None
+    track_index: int | None = Field(default=None, ge=1, le=128)
 
     @model_validator(mode="after")
     def order(self):
-        if self.end < self.start:
-            raise ValueError("end must follow start")
+        if self.end <= self.start:
+            raise ValueError("exclusive end must follow start")
+        if (self.record_frame is None) != (self.track_index is None):
+            raise ValueError("record_frame and track_index must be specified together")
+        if self.record_frame is not None and self.media_type != 1:
+            raise ValueError(
+                "positioned placement is video-only; preserve existing audio"
+            )
         return self
 
 

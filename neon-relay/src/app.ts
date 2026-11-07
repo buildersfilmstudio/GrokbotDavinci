@@ -149,7 +149,7 @@ export function createApp(store: Store, cfg: Config) {
         // Every authenticated MCP request gets a durable quota, including initialize/list.
         await store.clientBudget();
         const server = new Server(
-          { name: "grokbot-davinci-neon", version: "0.4.2" },
+          { name: "grokbot-davinci-neon", version: "0.5.0" },
           { capabilities: { tools: {} } },
         );
         async function query(op: string, payload = {}) {

@@ -82,6 +82,8 @@ def env(tmp_path):
         "GetUniqueId",
         "GetName",
         "GetTrackCount",
+        "GetStartFrame",
+        "GetSetting",
         "GetItemListInTrack",
         "DuplicateTimeline",
         "AddTrack",
@@ -110,6 +112,8 @@ def env(tmp_path):
             "GetUniqueId",
             "SetProperty",
             "GetProperty",
+            "GetStart",
+            "GetEnd",
             "AddVersion",
             "LoadVersionByName",
             "SetCDL",
@@ -139,7 +143,7 @@ def env(tmp_path):
     ):
         getattr(timeline, name).return_value = True
     timeline.GetVoiceIsolationState.return_value = {"isEnabled": True, "amount": 50}
-    media = Mock(spec=["GetMediaId"])
+    media = Mock(spec=["GetMediaId", "GetClipProperty"])
     media.GetMediaId.return_value = "media1"
     folder = Mock(spec=["GetClipList"])
     folder.GetClipList.return_value = [media]
@@ -208,6 +212,7 @@ def env(tmp_path):
         output=output,
         media=media_path,
         lut=lut,
+        media_item=media,
     )
     store.close()
 
@@ -828,3 +833,98 @@ def test_missing_preset_fails_before_render_mutation(env):
         )
     env["p"].LoadRenderPreset.assert_not_called()
     env["p"].AddRenderJob.assert_not_called()
+
+
+def positioned_setup(env):
+    asset = env["output"].parent / "score.mov"
+    asset.write_bytes(b"mock-only")
+    properties = {"FPS": "24", "File Path": str(asset)}
+    env["media_item"].GetClipProperty.side_effect = properties.get
+    env["t"].GetSetting.return_value = "24"
+    env["t"].GetStartFrame.return_value = 0
+    env["t"].GetItemListInTrack.return_value = []
+    env["clip"].GetStart.return_value = 10
+    env["clip"].GetEnd.return_value = 34
+    return {
+        "kind": "append_clip",
+        "media_id": "media1",
+        "start": 0,
+        "end": 24,
+        "record_frame": 10,
+        "track_index": 2,
+    }, properties
+
+
+def test_explicit_overlay_placement_uses_official_fields_and_readback(env):
+    action, _ = positioned_setup(env)
+    result, plan = run(env, action)
+    assert result["recordFrame"] == 10 and result["trackIndex"] == 2
+    sent = env["p"].GetMediaPool().AppendToTimeline.call_args.args[0][0]
+    assert sent["recordFrame"] == 10 and sent["trackIndex"] == 2
+    with pytest.raises(PermissionError, match="consumed"):
+        env["editor"].execute(plan)
+
+
+def test_overlay_refuses_occupied_interval_before_any_append(env):
+    action, _ = positioned_setup(env)
+    env["t"].GetItemListInTrack.return_value = [env["clip"]]
+    with pytest.raises(PermissionError, match="target_interval_occupied"):
+        run(env, action)
+    env["p"].GetMediaPool().AppendToTimeline.assert_not_called()
+
+
+def test_overlay_requires_allowlisted_asset_and_identical_fps(env):
+    action, properties = positioned_setup(env)
+    properties["FPS"] = "60"
+    with pytest.raises(ValueError, match="fps_must_match"):
+        run(env, action)
+    properties["FPS"] = "24"
+    outside = env["output"].parent.parent / "not-allowed.png"
+    outside.write_bytes(b"mock-only")
+    properties["File Path"] = str(outside)
+    with pytest.raises(PermissionError, match="outside_allowed_roots"):
+        run(env, action)
+    env["p"].GetMediaPool().AppendToTimeline.assert_not_called()
+
+
+def test_native_wrong_placement_is_failure_and_never_rearmed(env):
+    action, _ = positioned_setup(env)
+    env["clip"].GetEnd.return_value = 35
+    plan = make_plan("project", "copy", ACTION.validate_python(action))
+    env["store"].approve(plan)
+    with pytest.raises(RuntimeError, match="native_readback_mismatch"):
+        env["editor"].execute(plan)
+    with pytest.raises(PermissionError, match="consumed"):
+        env["editor"].execute(plan)
+    assert env["p"].GetMediaPool().AppendToTimeline.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"record_frame": 10},
+        {"track_index": 2},
+        {"record_frame": 10, "track_index": 2, "media_type": 2},
+    ],
+)
+def test_partial_or_audio_positioned_placement_rejected(extra):
+    with pytest.raises(ValueError):
+        ACTION.validate_python(
+            {
+                "kind": "append_clip",
+                "media_id": "media1",
+                "start": 0,
+                "end": 23,
+                **extra,
+            }
+        )
+
+
+def test_positioned_still_refused_before_native_default_duration_can_apply(env):
+    action, properties = positioned_setup(env)
+    still = env["output"].parent / "score.png"
+    still.write_bytes(b"mock-only")
+    properties["File Path"] = str(still)
+    with pytest.raises(PermissionError, match="requires_encoded_video"):
+        run(env, action)
+    env["p"].GetMediaPool().AppendToTimeline.assert_not_called()

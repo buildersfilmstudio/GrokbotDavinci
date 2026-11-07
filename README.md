@@ -73,7 +73,7 @@ useful supported-API coverage, **not full GUI parity**.
 |---|---|
 | `copy_timeline` | Duplicate under a new non-conflicting name, register and activate working copy |
 | `track` | Add video/stereo audio track; name, enable/disable, lock/unlock |
-| `append_clip` | Append existing current-bin media with bounded source frame range; video or audio |
+| `append_clip` | Append current-bin media; optional explicit video-only frame/track overlay placement, root-restricted encoded MOV/MP4, matching FPS, occupied-interval refusal and exact native timing readback |
 | `transform` | Clip pan, tilt, zoom, rotation, opacity; no arbitrary properties |
 | `marker` | Timeline marker with name, note, color, duration |
 | `title` | Insert Text+ at timecode and set text; target track/duration follow native UI selection/defaults |
@@ -332,3 +332,24 @@ implementation, but exact Mac/21.1 behavior remains an explicit native test gate
 
 Native render-state caveat reference (observed and reproduced locally):
 https://github.com/samuelgursky/davinci-resolve-mcp/issues/123
+
+## v0.5 explicit overlay placement
+
+`append_clip` accepts optional `record_frame` and `track_index` together. Positioned
+placement is video-only, scoped to a registered working timeline, and only imports
+from configured asset roots. Source video FPS must match timeline FPS; no hidden
+retiming. The target interval must be unoccupied. Source `end` is exclusive on the
+live-verified Resolve21.1 path. The worker independently reads back start/end and
+fails consumed commands closed on any mismatch, never retrying a partial mutation.
+
+Only encoded MOV/MP4 assets support positioned placement: Resolve21 ignored the
+requested still-image duration and inserted its native default5seconds. That failure
+was caught by native timing verification in the disposable project, not hidden.
+Still placement is now refused before mutation; encode timed alpha-overlay video.
+A24-frame24fps alpha MOV subsequently placed at exact absolute frame86640 on
+track3, read back with exact24-frame duration; overlapping placement was rejected.
+These are synthetic test positions, not user-original edits.
+
+Actual violin transcription is not complete: independent Spotify Basic Pitch and
+YIN/envelope analysis expose repeated-bow segmentation disagreements. No guessed
+published score or unverified note sequence was inserted into original footage.

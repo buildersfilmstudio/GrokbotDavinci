@@ -36,6 +36,34 @@
             ],
             "title": "Media Type",
             "type": "integer"
+          },
+          "record_frame": {
+            "anyOf": [
+              {
+                "maximum": 100000000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Record Frame"
+          },
+          "track_index": {
+            "anyOf": [
+              {
+                "maximum": 128,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Track Index"
           }
         },
         "required": [
@@ -868,6 +896,34 @@
             ],
             "title": "Media Type",
             "type": "integer"
+          },
+          "record_frame": {
+            "anyOf": [
+              {
+                "maximum": 100000000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Record Frame"
+          },
+          "track_index": {
+            "anyOf": [
+              {
+                "maximum": 128,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Track Index"
           }
         },
         "required": [

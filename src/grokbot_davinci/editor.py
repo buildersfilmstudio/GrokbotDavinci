@@ -199,6 +199,44 @@ class Editor:
             if a.kind in ("cdl", "lut"):
                 method(item, "AddVersion")
                 method(item, "LoadVersionByName")
+        if a.kind == "append_clip" and a.record_frame is not None:
+            # Finite video-overlay placement, not arbitrary timeline RPC. Never overwrite.
+            if a.track_index > t.GetTrackCount("video"):
+                raise ValueError("target_video_track_missing")
+            if a.record_frame < t.GetStartFrame():
+                raise ValueError("placement_before_timeline_start")
+            end = a.record_frame + a.end - a.start
+            if end > 100000000:
+                raise ValueError("placement_out_of_bounds")
+            for existing in t.GetItemListInTrack("video", a.track_index) or []:
+                if existing.GetStart() < end and existing.GetEnd() > a.record_frame:
+                    raise PermissionError("target_interval_occupied")
+            media = next(
+                (
+                    c
+                    for c in p.GetMediaPool().GetCurrentFolder().GetClipList() or []
+                    if c.GetMediaId() == a.media_id
+                ),
+                None,
+            )
+            if not media:
+                raise ValueError("media_not_in_current_bin")
+            asset = self.policy.checked_path(media.GetClipProperty("File Path"))
+            # Resolve ignores requested still duration here (native default5s).
+            # Require pre-encoded same-FPS overlay video for verifiable timing.
+            if asset.suffix.lower() not in {".mov", ".mp4"}:
+                raise PermissionError("positioned_overlay_requires_encoded_video")
+            # No implicit retiming: source and timeline frame rates must match.
+            source_fps = float(media.GetClipProperty("FPS"))
+            timeline_fps = float(t.GetSetting("timelineFrameRate"))
+            if (
+                source_fps <= 0
+                or timeline_fps <= 0
+                or not math.isfinite(source_fps)
+                or not math.isfinite(timeline_fps)
+                or abs(source_fps - timeline_fps) > 0.001
+            ):
+                raise ValueError("positioned_media_fps_must_match_timeline")
         if a.kind == "import_media":
             for path in a.paths:
                 if (
@@ -274,6 +312,11 @@ class Editor:
             clip = next((c for c in media if c.GetMediaId() == a.media_id), None)
             if not clip:
                 raise ValueError("media_not_in_current_bin")
+            placement = (
+                {}
+                if a.record_frame is None
+                else {"recordFrame": a.record_frame, "trackIndex": a.track_index}
+            )
             result = p.GetMediaPool().AppendToTimeline(
                 [
                     {
@@ -281,12 +324,23 @@ class Editor:
                         "startFrame": a.start,
                         "endFrame": a.end,
                         "mediaType": a.media_type,
+                        **placement,
                     }
                 ]
             )
             if not result:
                 raise RuntimeError("append_failed")
-            return {"clip_ids": [uid(c) for c in result]}
+            if a.record_frame is not None:
+                expected_end = a.record_frame + a.end - a.start
+                if (
+                    len(result) != 1
+                    or result[0].GetStart() != a.record_frame
+                    or result[0].GetEnd() != expected_end
+                ):
+                    raise RuntimeError(
+                        "placement_native_readback_mismatch_inspect_copy_no_retry"
+                    )
+            return {"clip_ids": [uid(c) for c in result], **placement}
         if kind == "transform":
             clip = self.clip(t, a.clip_id)
             values = {

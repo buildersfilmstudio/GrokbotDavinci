@@ -118,3 +118,8 @@ Retry-After5) from an expired/unknown session (403). Rapid manual worker restart
 can hit the existing four-second admission interval; this is not a credential
 failure and must not terminate the worker. Session signatures, expiry, budgets and
 admission limits are unchanged; the distinction is regression-tested.
+
+The v0.5 schemas include the finite explicit overlay placement fields described in
+the root README. Python preparation enforces their paired-field/video-only rules;
+Mac preflight enforces media roots/FPS/occupancy and execution verifies actual
+start/end. No generic method calls or arbitrary execution were introduced.
