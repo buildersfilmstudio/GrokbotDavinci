@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "grokbot-davinci"
-version = "0.2.0"
+version = "0.3.0"
 description = "Outbound-only, locally approved DaVinci Resolve editing MCP connector"
 requires-python = ">=3.12"
 dependencies = ["mcp==1.30.0", "httpx>=0.28,<1", "uvicorn>=0.35,<1"]

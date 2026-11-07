@@ -175,6 +175,10 @@ def main():
     parser.add_argument("--token-file", required=True)
     parser.add_argument("--worker-id", default="peters-mac")
     parser.add_argument(
+        "--session-file",
+        help="Private signed Neon session JSON; worker stops before expiry",
+    )
+    parser.add_argument(
         "--allow-edits",
         action="store_true",
         help="Still requires one-use local approval for EVERY command",
@@ -209,18 +213,29 @@ def main():
     token = path.read_text().strip()
     if not 32 <= len(token) <= 256:
         raise SystemExit("Invalid worker token")
+    headers = {"Authorization": "Bearer " + token}
+    expires_at = None
+    if args.session_file:
+        session_path = Path(args.session_file)
+        if session_path.is_symlink() or session_path.stat().st_mode & 0o077:
+            raise SystemExit("Session file must be private and not a symlink")
+        grant = json.loads(session_path.read_text())
+        expires_at = float(grant["expires_at"])
+        if not time.time() + 12 < expires_at <= time.time() + 1801:
+            raise SystemExit("Session expired or invalid")
+        headers["X-Worker-Session"] = grant["session"]
     with httpx.Client(
         base_url=url,
-        headers={"Authorization": "Bearer " + token},
+        headers=headers,
         timeout=12,
         follow_redirects=False,
         trust_env=False,
     ) as client:
         worker = Worker(client, args.worker_id, policy=policy)
-        while True:
+        while expires_at is None or time.time() + 12 < expires_at:
             try:
-                worked = worker.run_once()
-                time.sleep(0.2 if worked else 1)
+                worker.run_once()
+                time.sleep(5)
             except httpx.HTTPStatusError as e:
                 if e.response.status_code in (401, 403):
                     raise SystemExit(

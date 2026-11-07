@@ -18,7 +18,17 @@ Video stays on the Mac; requested project, timeline and clip names leave it.
 Anyone holding the client token can request these reads while the worker is running.
 This is not an official Blackmagic or Grok Bot product.
 
-## Implemented tools (v0.2)
+## Hosting update: v0.3 Neon Free
+
+See [neon-relay/README.md](neon-relay/README.md) for the separate TypeScript/Postgres
+relay deployed on Neon Free. **Its current live scope is five read-only tools**;
+the seven-tool/14-action Python relay below remains locally/mock tested and is not
+the live Neon editing surface. Read-only HTTPS → Mac version/project/timeline
+roundtrips are now live-verified. Remote editing port and disposable native edit
+validation remain pending. Worker sessions expire after30minutes to preserve free
+budgets; no always-on polling or Tailscale required.
+
+## Python relay implemented tools (v0.2)
 
 Seven MCP tools: `resolve_version`, `current_project`, `current_timeline`,
 `current_media_bin`, `inspect_resolve`, `prepare_edit`, and `execute_edit`.

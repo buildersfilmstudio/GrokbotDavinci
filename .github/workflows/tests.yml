@@ -15,3 +15,15 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install '.[test]'
       - run: python -m pytest -q
+
+  neon-relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+        working-directory: neon-relay
+      - run: npm run check && npm test && npm run build
+        working-directory: neon-relay
