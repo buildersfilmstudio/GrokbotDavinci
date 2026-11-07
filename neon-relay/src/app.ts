@@ -1,5 +1,12 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import {
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { Ajv } from "ajv";
+import canonicalize from "canonicalize";
+import schemas from "./schemas.json" with { type: "json" };
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 import { Store, hash } from "./store.js";
@@ -141,10 +148,10 @@ export function createApp(store: Store, cfg: Config) {
         if (path !== "/mcp") return new Response("Not found", { status: 404 });
         // Every authenticated MCP request gets a durable quota, including initialize/list.
         await store.clientBudget();
-        const server = new McpServer({
-          name: "grokbot-davinci-neon-readonly",
-          version: "0.3.0",
-        });
+        const server = new Server(
+          { name: "grokbot-davinci-neon", version: "0.4.0" },
+          { capabilities: { tools: {} } },
+        );
         async function query(op: string, payload = {}) {
           const id = await store.enqueue(op, payload);
           const deadline = Date.now() + 23000;
@@ -163,37 +170,87 @@ export function createApp(store: Store, cfg: Config) {
           }
           throw Error("worker_offline_or_timeout");
         }
-        for (const [name, op] of Object.entries({
+        const reads: Record<string, string> = {
           resolve_version: "version",
           current_project: "project",
           current_timeline: "timeline",
           current_media_bin: "media",
-        }))
-          server.registerTool(
-            name,
-            { description: "Read-only live Resolve metadata", inputSchema: {} },
-            () => query(op),
-          );
-        server.registerTool(
-          "inspect_resolve",
-          {
-            description: "Read-only scoped API inventory",
-            inputSchema: {
-              domain: z.enum([
-                "capabilities",
-                "inventory",
-                "audio",
-                "fusion",
-                "render",
-              ]),
-              clip_id: z
-                .string()
-                .regex(/^[A-Za-z0-9_:-]{1,128}$/)
-                .optional(),
+        };
+        const inspectSchema = {
+          type: "object",
+          additionalProperties: false,
+          required: ["domain"],
+          properties: {
+            domain: {
+              enum: ["capabilities", "inventory", "audio", "fusion", "render"],
             },
+            clip_id: { type: "string", pattern: "^[A-Za-z0-9_:-]{1,128}$" },
           },
-          (args) => query("inspect", args),
-        );
+        };
+        const tools = [
+          ...Object.keys(reads).map((name) => ({
+            name,
+            description: "Read-only live Resolve metadata",
+            inputSchema: {
+              type: "object" as const,
+              properties: {},
+              additionalProperties: false,
+            },
+          })),
+          {
+            name: "inspect_resolve",
+            description: "Read-only scoped API inventory",
+            inputSchema: inspectSchema,
+          },
+          {
+            name: "prepare_edit",
+            description:
+              "Validate a typed scoped edit on the Mac and return exact plan/digest. Does not edit or grant approval. Supports 14 kinds: copy_timeline, track, append_clip, transform, marker, title, import_media, voice_isolation, fairlight_preset, cdl, lut, fusion_build, queue_render, start_render.",
+            inputSchema: schemas.preparation,
+          },
+          {
+            name: "execute_edit",
+            description:
+              "Queue exact prepared plan with EXECUTE <digest> confirmation. Every mutation additionally requires one-use Mac-local approval and working-copy scope. No automatic retries after partial/unknown result.",
+            inputSchema: schemas.execution,
+          },
+        ];
+        server.setRequestHandler(ListToolsRequestSchema, async () => ({
+          tools,
+        }));
+        server.setRequestHandler(CallToolRequestSchema, async (request) => {
+          try {
+            const tool = tools.find((t) => t.name === request.params.name);
+            if (!tool) throw Error("unknown_tool");
+            const args = request.params.arguments ?? {};
+            const validate = new Ajv({
+              strict: false,
+              allErrors: false,
+            }).compile(tool.inputSchema);
+            if (!validate(args)) throw Error("invalid_typed_arguments");
+            if (request.params.name in reads)
+              return await query(reads[request.params.name]);
+            if (request.params.name === "inspect_resolve")
+              return await query("inspect", args);
+            if (request.params.name === "prepare_edit")
+              return await query("prepare", args);
+            const plan = args.plan as object;
+            const key = hash(canonicalize(plan)!);
+            if (args.confirmation !== "EXECUTE " + key)
+              throw Error("exact_digest_confirmation_required");
+            return await query("edit", plan);
+          } catch {
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text" as const,
+                  text: "Operation rejected or failed; mutation may be partial. Inspect working copy; never automatically retry or rearm approval.",
+                },
+              ],
+            };
+          }
+        });
         const transport = new WebStandardStreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: true,

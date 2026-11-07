@@ -1,0 +1,1631 @@
+{
+  "preparation": {
+    "$defs": {
+      "AppendClip": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "append_clip",
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Media Id",
+            "type": "string"
+          },
+          "start": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "end": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "End",
+            "type": "integer"
+          },
+          "media_type": {
+            "default": 1,
+            "enum": [
+              1,
+              2
+            ],
+            "title": "Media Type",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "media_id",
+          "start",
+          "end"
+        ],
+        "title": "AppendClip",
+        "type": "object"
+      },
+      "CDL": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "cdl",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "node": {
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Node",
+            "type": "integer"
+          },
+          "slope": {
+            "items": {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Slope",
+            "type": "array"
+          },
+          "offset": {
+            "items": {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Offset",
+            "type": "array"
+          },
+          "power": {
+            "items": {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Power",
+            "type": "array"
+          },
+          "saturation": {
+            "default": 1.0,
+            "maximum": 10,
+            "minimum": 0,
+            "title": "Saturation",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id",
+          "node"
+        ],
+        "title": "CDL",
+        "type": "object"
+      },
+      "CopyTimeline": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "copy_timeline",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "CopyTimeline",
+        "type": "object"
+      },
+      "Edge": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "maxLength": 32,
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "maxLength": 32,
+            "title": "Target",
+            "type": "string"
+          },
+          "input": {
+            "maxLength": 32,
+            "title": "Input",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "input"
+        ],
+        "title": "Edge",
+        "type": "object"
+      },
+      "FairlightPreset": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "fairlight_preset",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "FairlightPreset",
+        "type": "object"
+      },
+      "FusionBuild": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "fusion_build",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/$defs/Node"
+            },
+            "maxItems": 24,
+            "minItems": 1,
+            "title": "Nodes",
+            "type": "array"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/$defs/Edge"
+            },
+            "maxItems": 48,
+            "title": "Edges",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id",
+          "nodes",
+          "edges"
+        ],
+        "title": "FusionBuild",
+        "type": "object"
+      },
+      "ImportMedia": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "import_media",
+            "title": "Kind",
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "paths"
+        ],
+        "title": "ImportMedia",
+        "type": "object"
+      },
+      "Key": {
+        "additionalProperties": false,
+        "properties": {
+          "frame": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "Frame",
+            "type": "integer"
+          },
+          "value": {
+            "maximum": 100000,
+            "minimum": -100000,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "frame",
+          "value"
+        ],
+        "title": "Key",
+        "type": "object"
+      },
+      "LUT": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "lut",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "node": {
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Node",
+            "type": "integer"
+          },
+          "path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id",
+          "node",
+          "path"
+        ],
+        "title": "LUT",
+        "type": "object"
+      },
+      "Marker": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "marker",
+            "title": "Kind",
+            "type": "string"
+          },
+          "frame": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "Frame",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 1024,
+            "title": "Note",
+            "type": "string"
+          },
+          "color": {
+            "default": "Blue",
+            "enum": [
+              "Blue",
+              "Green",
+              "Red",
+              "Yellow",
+              "Purple",
+              "Cyan"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "duration": {
+            "default": 1,
+            "maximum": 100000,
+            "minimum": 1,
+            "title": "Duration",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "frame",
+          "name"
+        ],
+        "title": "Marker",
+        "type": "object"
+      },
+      "Node": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "tool": {
+            "enum": [
+              "Background",
+              "TextPlus",
+              "Merge",
+              "Transform",
+              "Blur",
+              "RectangleMask",
+              "EllipseMask",
+              "MediaOut"
+            ],
+            "title": "Tool",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/Point"
+                }
+              ]
+            },
+            "maxProperties": 12,
+            "title": "Inputs",
+            "type": "object"
+          },
+          "keyframes": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/$defs/Key"
+              },
+              "type": "array"
+            },
+            "maxProperties": 6,
+            "title": "Keyframes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "tool"
+        ],
+        "title": "Node",
+        "type": "object"
+      },
+      "Point": {
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "maximum": 10,
+            "minimum": -10,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "maximum": 10,
+            "minimum": -10,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Point",
+        "type": "object"
+      },
+      "QueueRender": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "queue_render",
+            "title": "Kind",
+            "type": "string"
+          },
+          "directory": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Directory",
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "mov",
+              "mp4",
+              "wav"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "codec": {
+            "pattern": "^[A-Za-z0-9_ -]{1,64}$",
+            "title": "Codec",
+            "type": "string"
+          },
+          "export_video": {
+            "default": true,
+            "title": "Export Video",
+            "type": "boolean"
+          },
+          "export_audio": {
+            "default": true,
+            "title": "Export Audio",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "directory",
+          "name",
+          "format",
+          "codec"
+        ],
+        "title": "QueueRender",
+        "type": "object"
+      },
+      "StartRender": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "start_render",
+            "title": "Kind",
+            "type": "string"
+          },
+          "job_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "job_id"
+        ],
+        "title": "StartRender",
+        "type": "object"
+      },
+      "Title": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "title",
+            "title": "Kind",
+            "type": "string"
+          },
+          "timecode": {
+            "pattern": "^\\d{2}:\\d{2}:\\d{2}[:;]\\d{2}$",
+            "title": "Timecode",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "timecode",
+          "text"
+        ],
+        "title": "Title",
+        "type": "object"
+      },
+      "TrackEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "track",
+            "title": "Kind",
+            "type": "string"
+          },
+          "track_type": {
+            "enum": [
+              "video",
+              "audio"
+            ],
+            "title": "Track Type",
+            "type": "string"
+          },
+          "index": {
+            "maximum": 128,
+            "minimum": 1,
+            "title": "Index",
+            "type": "integer"
+          },
+          "action": {
+            "enum": [
+              "add",
+              "name",
+              "enable",
+              "lock"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "name": {
+            "default": "Connector track",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "track_type",
+          "index",
+          "action"
+        ],
+        "title": "TrackEdit",
+        "type": "object"
+      },
+      "Transform": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "transform",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "pan": {
+            "default": 0.0,
+            "maximum": 100000,
+            "minimum": -100000,
+            "title": "Pan",
+            "type": "number"
+          },
+          "tilt": {
+            "default": 0.0,
+            "maximum": 100000,
+            "minimum": -100000,
+            "title": "Tilt",
+            "type": "number"
+          },
+          "zoom_x": {
+            "default": 1.0,
+            "maximum": 100,
+            "minimum": 0.01,
+            "title": "Zoom X",
+            "type": "number"
+          },
+          "zoom_y": {
+            "default": 1.0,
+            "maximum": 100,
+            "minimum": 0.01,
+            "title": "Zoom Y",
+            "type": "number"
+          },
+          "rotation": {
+            "default": 0.0,
+            "maximum": 360,
+            "minimum": -360,
+            "title": "Rotation",
+            "type": "number"
+          },
+          "opacity": {
+            "default": 100.0,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Opacity",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id"
+        ],
+        "title": "Transform",
+        "type": "object"
+      },
+      "VoiceIsolation": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "voice_isolation",
+            "title": "Kind",
+            "type": "string"
+          },
+          "track": {
+            "maximum": 128,
+            "minimum": 1,
+            "title": "Track",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "amount": {
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Amount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "track",
+          "enabled",
+          "amount"
+        ],
+        "title": "VoiceIsolation",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "project_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_:-]+$",
+        "title": "Project Id",
+        "type": "string"
+      },
+      "timeline_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_:-]+$",
+        "title": "Timeline Id",
+        "type": "string"
+      },
+      "action": {
+        "discriminator": {
+          "mapping": {
+            "append_clip": "#/$defs/AppendClip",
+            "cdl": "#/$defs/CDL",
+            "copy_timeline": "#/$defs/CopyTimeline",
+            "fairlight_preset": "#/$defs/FairlightPreset",
+            "fusion_build": "#/$defs/FusionBuild",
+            "import_media": "#/$defs/ImportMedia",
+            "lut": "#/$defs/LUT",
+            "marker": "#/$defs/Marker",
+            "queue_render": "#/$defs/QueueRender",
+            "start_render": "#/$defs/StartRender",
+            "title": "#/$defs/Title",
+            "track": "#/$defs/TrackEdit",
+            "transform": "#/$defs/Transform",
+            "voice_isolation": "#/$defs/VoiceIsolation"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/CopyTimeline"
+          },
+          {
+            "$ref": "#/$defs/TrackEdit"
+          },
+          {
+            "$ref": "#/$defs/AppendClip"
+          },
+          {
+            "$ref": "#/$defs/Transform"
+          },
+          {
+            "$ref": "#/$defs/Marker"
+          },
+          {
+            "$ref": "#/$defs/Title"
+          },
+          {
+            "$ref": "#/$defs/ImportMedia"
+          },
+          {
+            "$ref": "#/$defs/VoiceIsolation"
+          },
+          {
+            "$ref": "#/$defs/FairlightPreset"
+          },
+          {
+            "$ref": "#/$defs/CDL"
+          },
+          {
+            "$ref": "#/$defs/LUT"
+          },
+          {
+            "$ref": "#/$defs/FusionBuild"
+          },
+          {
+            "$ref": "#/$defs/QueueRender"
+          },
+          {
+            "$ref": "#/$defs/StartRender"
+          }
+        ],
+        "title": "Action"
+      }
+    },
+    "required": [
+      "project_id",
+      "timeline_id",
+      "action"
+    ],
+    "title": "Preparation",
+    "type": "object"
+  },
+  "execution": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "plan",
+      "confirmation"
+    ],
+    "properties": {
+      "plan": {
+        "$ref": "#/$defs/Plan"
+      },
+      "confirmation": {
+        "type": "string",
+        "maxLength": 80
+      }
+    },
+    "$defs": {
+      "AppendClip": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "append_clip",
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Media Id",
+            "type": "string"
+          },
+          "start": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "end": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "End",
+            "type": "integer"
+          },
+          "media_type": {
+            "default": 1,
+            "enum": [
+              1,
+              2
+            ],
+            "title": "Media Type",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "media_id",
+          "start",
+          "end"
+        ],
+        "title": "AppendClip",
+        "type": "object"
+      },
+      "CDL": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "cdl",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "node": {
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Node",
+            "type": "integer"
+          },
+          "slope": {
+            "items": {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Slope",
+            "type": "array"
+          },
+          "offset": {
+            "items": {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Offset",
+            "type": "array"
+          },
+          "power": {
+            "items": {
+              "maximum": 100000,
+              "minimum": -100000,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Power",
+            "type": "array"
+          },
+          "saturation": {
+            "default": 1.0,
+            "maximum": 10,
+            "minimum": 0,
+            "title": "Saturation",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id",
+          "node"
+        ],
+        "title": "CDL",
+        "type": "object"
+      },
+      "CopyTimeline": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "copy_timeline",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "CopyTimeline",
+        "type": "object"
+      },
+      "Edge": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "maxLength": 32,
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "maxLength": 32,
+            "title": "Target",
+            "type": "string"
+          },
+          "input": {
+            "maxLength": 32,
+            "title": "Input",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "input"
+        ],
+        "title": "Edge",
+        "type": "object"
+      },
+      "FairlightPreset": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "fairlight_preset",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "FairlightPreset",
+        "type": "object"
+      },
+      "FusionBuild": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "fusion_build",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/$defs/Node"
+            },
+            "maxItems": 24,
+            "minItems": 1,
+            "title": "Nodes",
+            "type": "array"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/$defs/Edge"
+            },
+            "maxItems": 48,
+            "title": "Edges",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id",
+          "nodes",
+          "edges"
+        ],
+        "title": "FusionBuild",
+        "type": "object"
+      },
+      "ImportMedia": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "import_media",
+            "title": "Kind",
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "paths"
+        ],
+        "title": "ImportMedia",
+        "type": "object"
+      },
+      "Key": {
+        "additionalProperties": false,
+        "properties": {
+          "frame": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "Frame",
+            "type": "integer"
+          },
+          "value": {
+            "maximum": 100000,
+            "minimum": -100000,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "frame",
+          "value"
+        ],
+        "title": "Key",
+        "type": "object"
+      },
+      "LUT": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "lut",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "node": {
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Node",
+            "type": "integer"
+          },
+          "path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id",
+          "node",
+          "path"
+        ],
+        "title": "LUT",
+        "type": "object"
+      },
+      "Marker": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "marker",
+            "title": "Kind",
+            "type": "string"
+          },
+          "frame": {
+            "maximum": 100000000,
+            "minimum": 0,
+            "title": "Frame",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 1024,
+            "title": "Note",
+            "type": "string"
+          },
+          "color": {
+            "default": "Blue",
+            "enum": [
+              "Blue",
+              "Green",
+              "Red",
+              "Yellow",
+              "Purple",
+              "Cyan"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "duration": {
+            "default": 1,
+            "maximum": 100000,
+            "minimum": 1,
+            "title": "Duration",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "frame",
+          "name"
+        ],
+        "title": "Marker",
+        "type": "object"
+      },
+      "Node": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "tool": {
+            "enum": [
+              "Background",
+              "TextPlus",
+              "Merge",
+              "Transform",
+              "Blur",
+              "RectangleMask",
+              "EllipseMask",
+              "MediaOut"
+            ],
+            "title": "Tool",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/Point"
+                }
+              ]
+            },
+            "maxProperties": 12,
+            "title": "Inputs",
+            "type": "object"
+          },
+          "keyframes": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/$defs/Key"
+              },
+              "type": "array"
+            },
+            "maxProperties": 6,
+            "title": "Keyframes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "tool"
+        ],
+        "title": "Node",
+        "type": "object"
+      },
+      "Point": {
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "maximum": 10,
+            "minimum": -10,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "maximum": 10,
+            "minimum": -10,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Point",
+        "type": "object"
+      },
+      "QueueRender": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "queue_render",
+            "title": "Kind",
+            "type": "string"
+          },
+          "directory": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Directory",
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "mov",
+              "mp4",
+              "wav"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "codec": {
+            "pattern": "^[A-Za-z0-9_ -]{1,64}$",
+            "title": "Codec",
+            "type": "string"
+          },
+          "export_video": {
+            "default": true,
+            "title": "Export Video",
+            "type": "boolean"
+          },
+          "export_audio": {
+            "default": true,
+            "title": "Export Audio",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "directory",
+          "name",
+          "format",
+          "codec"
+        ],
+        "title": "QueueRender",
+        "type": "object"
+      },
+      "StartRender": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "start_render",
+            "title": "Kind",
+            "type": "string"
+          },
+          "job_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "job_id"
+        ],
+        "title": "StartRender",
+        "type": "object"
+      },
+      "Title": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "title",
+            "title": "Kind",
+            "type": "string"
+          },
+          "timecode": {
+            "pattern": "^\\d{2}:\\d{2}:\\d{2}[:;]\\d{2}$",
+            "title": "Timecode",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "timecode",
+          "text"
+        ],
+        "title": "Title",
+        "type": "object"
+      },
+      "TrackEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "track",
+            "title": "Kind",
+            "type": "string"
+          },
+          "track_type": {
+            "enum": [
+              "video",
+              "audio"
+            ],
+            "title": "Track Type",
+            "type": "string"
+          },
+          "index": {
+            "maximum": 128,
+            "minimum": 1,
+            "title": "Index",
+            "type": "integer"
+          },
+          "action": {
+            "enum": [
+              "add",
+              "name",
+              "enable",
+              "lock"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "name": {
+            "default": "Connector track",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "track_type",
+          "index",
+          "action"
+        ],
+        "title": "TrackEdit",
+        "type": "object"
+      },
+      "Transform": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "transform",
+            "title": "Kind",
+            "type": "string"
+          },
+          "clip_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "pan": {
+            "default": 0.0,
+            "maximum": 100000,
+            "minimum": -100000,
+            "title": "Pan",
+            "type": "number"
+          },
+          "tilt": {
+            "default": 0.0,
+            "maximum": 100000,
+            "minimum": -100000,
+            "title": "Tilt",
+            "type": "number"
+          },
+          "zoom_x": {
+            "default": 1.0,
+            "maximum": 100,
+            "minimum": 0.01,
+            "title": "Zoom X",
+            "type": "number"
+          },
+          "zoom_y": {
+            "default": 1.0,
+            "maximum": 100,
+            "minimum": 0.01,
+            "title": "Zoom Y",
+            "type": "number"
+          },
+          "rotation": {
+            "default": 0.0,
+            "maximum": 360,
+            "minimum": -360,
+            "title": "Rotation",
+            "type": "number"
+          },
+          "opacity": {
+            "default": 100.0,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Opacity",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "clip_id"
+        ],
+        "title": "Transform",
+        "type": "object"
+      },
+      "VoiceIsolation": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "voice_isolation",
+            "title": "Kind",
+            "type": "string"
+          },
+          "track": {
+            "maximum": 128,
+            "minimum": 1,
+            "title": "Track",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "amount": {
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Amount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "track",
+          "enabled",
+          "amount"
+        ],
+        "title": "VoiceIsolation",
+        "type": "object"
+      },
+      "Plan": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "project_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "timeline_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Timeline Id",
+            "type": "string"
+          },
+          "action": {
+            "discriminator": {
+              "mapping": {
+                "append_clip": "#/$defs/AppendClip",
+                "cdl": "#/$defs/CDL",
+                "copy_timeline": "#/$defs/CopyTimeline",
+                "fairlight_preset": "#/$defs/FairlightPreset",
+                "fusion_build": "#/$defs/FusionBuild",
+                "import_media": "#/$defs/ImportMedia",
+                "lut": "#/$defs/LUT",
+                "marker": "#/$defs/Marker",
+                "queue_render": "#/$defs/QueueRender",
+                "start_render": "#/$defs/StartRender",
+                "title": "#/$defs/Title",
+                "track": "#/$defs/TrackEdit",
+                "transform": "#/$defs/Transform",
+                "voice_isolation": "#/$defs/VoiceIsolation"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/CopyTimeline"
+              },
+              {
+                "$ref": "#/$defs/TrackEdit"
+              },
+              {
+                "$ref": "#/$defs/AppendClip"
+              },
+              {
+                "$ref": "#/$defs/Transform"
+              },
+              {
+                "$ref": "#/$defs/Marker"
+              },
+              {
+                "$ref": "#/$defs/Title"
+              },
+              {
+                "$ref": "#/$defs/ImportMedia"
+              },
+              {
+                "$ref": "#/$defs/VoiceIsolation"
+              },
+              {
+                "$ref": "#/$defs/FairlightPreset"
+              },
+              {
+                "$ref": "#/$defs/CDL"
+              },
+              {
+                "$ref": "#/$defs/LUT"
+              },
+              {
+                "$ref": "#/$defs/FusionBuild"
+              },
+              {
+                "$ref": "#/$defs/QueueRender"
+              },
+              {
+                "$ref": "#/$defs/StartRender"
+              }
+            ],
+            "title": "Action"
+          }
+        },
+        "required": [
+          "command_id",
+          "project_id",
+          "timeline_id",
+          "action"
+        ],
+        "title": "Plan",
+        "type": "object"
+      }
+    }
+  }
+}

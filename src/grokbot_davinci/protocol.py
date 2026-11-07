@@ -3,7 +3,9 @@
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-Operation = Literal["version", "project", "timeline", "media", "inspect", "edit"]
+Operation = Literal[
+    "version", "project", "timeline", "media", "inspect", "edit", "prepare"
+]
 
 
 class StrictModel(BaseModel):
@@ -29,6 +31,10 @@ class Job(StrictModel):
             from .edits import Plan
 
             Plan.model_validate(self.payload)
+        elif self.operation == "prepare":
+            from .edits import Preparation
+
+            Preparation.model_validate(self.payload)
         elif self.operation == "inspect":
             Inspection.model_validate(self.payload)
         elif self.payload:

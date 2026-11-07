@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+import math
 from .approval import ApprovalStore
 from .edits import Point
 
@@ -64,6 +65,44 @@ def method(obj, name):
 def success(value):
     if value is not True:
         raise RuntimeError("api_rejected_or_unverified")
+
+
+def input_matches(actual, expected):
+    if isinstance(expected, dict):
+        return isinstance(actual, dict) and all(
+            key in actual and input_matches(actual[key], value)
+            for key, value in expected.items()
+        )
+    if isinstance(expected, (float, int)) and not isinstance(expected, bool):
+        return isinstance(actual, (float, int)) and math.isclose(
+            actual, expected, rel_tol=1e-6, abs_tol=1e-7
+        )
+    return actual == expected
+
+
+def set_fusion_input(node, key, value):
+    # Fusion SetInput is void, unlike Resolve's boolean setters. Verify readback.
+    node.SetInput(key, value)
+    if not input_matches(node.GetInput(key), value):
+        raise RuntimeError("fusion_input_readback_mismatch")
+
+
+def connect_fusion_input(target, key, source):
+    # Fusion ConnectInput is void. Verify the actual documented Link connection.
+    target.ConnectInput(key, source)
+    for port in (target.GetInputList() or {}).values():
+        if port.GetAttrs().get("INPS_ID") == key:
+            output = port.GetConnectedOutput()
+            upstream = output.GetTool() if output else None
+            expected_name = source.GetAttrs().get("TOOLS_Name")
+            if (
+                isinstance(expected_name, str)
+                and expected_name
+                and upstream
+                and upstream.GetAttrs().get("TOOLS_Name") == expected_name
+            ):
+                return
+    raise RuntimeError("fusion_connection_readback_mismatch")
 
 
 def uid(obj):
@@ -280,7 +319,7 @@ class Editor:
             tool = comp.FindToolByID("TextPlus")
             if not tool:
                 raise RuntimeError("textplus_not_found")
-            success(tool.SetInput("StyledText", a.text))
+            set_fusion_input(tool, "StyledText", a.text)
             return {
                 "clip_id": uid(item),
                 "text_readback": str(tool.GetInput("StyledText"))[:4096],
@@ -378,14 +417,17 @@ class Editor:
             for key, value in spec.inputs.items():
                 if isinstance(value, Point):
                     value = {1: value.x, 2: value.y}
-                success(node.SetInput(key, value))
+                set_fusion_input(node, key, value)
             for key, frames in spec.keyframes.items():
                 # Public Fusion scalar animation API, no expressions or code evaluated.
                 node[key] = comp.BezierSpline()
                 for frame in frames:
                     node[key][frame.frame] = frame.value
+                for frame in frames:
+                    if not input_matches(node.GetInput(key, frame.frame), frame.value):
+                        raise RuntimeError("fusion_keyframe_readback_mismatch")
         for edge in action.edges:
-            success(created[edge.target].ConnectInput(edge.input, created[edge.source]))
+            connect_fusion_input(created[edge.target], edge.input, created[edge.source])
         return {
             "new_composition": True,
             "nodes": list(created),

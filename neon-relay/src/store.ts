@@ -60,6 +60,8 @@ export class Store {
     });
   }
   async enqueue(operation: string, payload: object) {
+    if (Buffer.byteLength(JSON.stringify(payload)) > 32768)
+      throw Error("payload_too_large");
     return this.tx(async (c) => {
       const {
         rows: [s],

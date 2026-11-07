@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 import httpx
 from .adapter import ResolveAdapter
 from .protocol import Job, MAX_BODY, MAX_RESULT
-from .edits import Plan
+from .edits import Plan, prepare
 from .editor import Editor, EditPolicy
 
 
@@ -41,6 +41,9 @@ def _read(operation, sender, payload, policy):
     try:
         if operation == "edit" and not policy.enabled:
             raise PermissionError("edits_disabled")
+        if operation == "prepare":
+            sender.send(dict(ok=True, result=prepare(payload)))
+            return
         adapter = ResolveAdapter.connect()
         if operation == "edit":
             result = Editor(adapter.resolve, policy).execute(
@@ -146,7 +149,7 @@ class Worker:
             raise ValueError("invalid_job_expiry")
         if job.operation == "edit" and not self.policy.enabled:
             result = {"ok": False, "result": {"error": "worker_edits_disabled"}}
-        elif job.operation in ("edit", "inspect"):
+        elif job.operation in ("edit", "inspect", "prepare"):
             result = self.reader(
                 job.operation, min(8, remaining - 1), job.payload, self.policy
             )

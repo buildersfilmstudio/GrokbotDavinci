@@ -1,0 +1,33 @@
+[
+  {
+    "plan": {
+      "command_id": "12345678-1234-4234-8234-123456789abc",
+      "project_id": "p",
+      "timeline_id": "t",
+      "action": {
+        "kind": "transform",
+        "clip_id": "clip1",
+        "pan": 1e-07,
+        "tilt": 0.0,
+        "zoom_x": 1.0,
+        "zoom_y": 1.0,
+        "rotation": 0.0,
+        "opacity": 100.0
+      }
+    },
+    "digest": "d2184f036ccb04cb0d89d7714f826cfb10537860f59fbd6a24c83e4e241185c5"
+  },
+  {
+    "plan": {
+      "command_id": "12345678-1234-4234-8234-123456789abc",
+      "project_id": "p",
+      "timeline_id": "t",
+      "action": {
+        "kind": "title",
+        "timecode": "01:00:00:00",
+        "text": "🎻 é"
+      }
+    },
+    "digest": "a54cd7b58d0b063a98cd1c5cde6994b22e1fa6737ca6bb2c131ea64538408cbd"
+  }
+]

@@ -1,17 +1,18 @@
-# Neon Free relay: v0.3 read-only deployment
+# Neon Free relay: v0.4 scoped editing deployment
 
 This is the **separate hosted relay for Neon Functions**, not the original Python
 SQLite relay. It runs Node.js 24 and uses a dedicated Lakebase Postgres project.
-The Python Mac adapter and its 14 locally approved editing operations remain in
-the repository, but this first Neon deployment exposes **five read-only tools**.
-Remote prepare/execute-edit is intentionally NOT exposed yet. Do not claim native
-editing/Fusion/audio/render parity from the read-only connection test.
+The Python Mac adapter implements 14 locally approved editing operations; this
+relay now exposes `prepare_edit` and `execute_edit` alongside five inspection tools.
+The seven-tool live SDK discovery and401 auth rejection were verified. Native
+synthetic editing tests and remaining gaps are recorded in the root README. Do not
+claim full native Fusion/audio/render parity from tool discovery or mock tests.
 
 ## Verified scope
 
 Official MCP SDK WebStandardStreamableHTTPServerTransport, stateless JSON responses.
 `resolve_version`, `current_project`, `current_timeline`, `current_media_bin`, and
-`inspect_resolve`. Single Peter-owned client, worker and database. No registration,
+`inspect_resolve`, `prepare_edit`, `execute_edit`. Single Peter-owned client, worker and database. No registration,
 public tools, arbitrary SQL, shell, filesystem browsing, or Mac inbound listener.
 
 Separate client/worker bearer tokens live only in owner-readable files and Function
@@ -59,7 +60,9 @@ usage must still be monitored. Never store/transfer original video through relay
 ## Build/deploy
 
 `npm ci && npm run check && npm test && npm run build` in this directory.
-`schema.sql` is the tracked migration, applied only to a NEW isolated connector DB.
+`schema.sql` initializes only a NEW isolated connector DB. Existing v0.3 databases
+need the reviewed `migrations/002-edit-operations.sql` constraint migration, which
+allows typed prepare/edit jobs without dropping receipts, approvals or other data.
 `dist/index.mjs` bundles runtime dependencies, archived as root `index.mjs` in ZIP.
 Deploy with official Neon `deploy_function` or authenticated CLI; Node.js24.
 Environment: DAVINCI_CLIENT_TOKEN, DAVINCI_WORKER_TOKEN, DAVINCI_ALLOWED_HOST.
@@ -71,7 +74,7 @@ ONLY the returned exact invocation hostname after reading `get_function`. During
 rollout, old isolates may briefly serve421 responses; do not disable Host checks.
 Once stable, require full SDK initialize/list/read tests and401 rejection tests.
 
-On Mac, install the reviewed0.3 wheel, chmod600 token/session files; run worker:
+On Mac, install the reviewed0.4 wheel, chmod600 token/session files; run worker:
 
 ```
 grokbot-davinci-worker --relay https://ACTUAL-INVOCATION-HOST \
@@ -79,16 +82,26 @@ grokbot-davinci-worker --relay https://ACTUAL-INVOCATION-HOST \
  --session-file /PRIVATE/session.secret.json
 ```
 
-No `--allow-edits` for this deployment. Use documented Resolve scripting environment
-from the root README. Session must be renewed explicitly; losing a response never
+Read-only is the worker default. To enable scoped editing, additionally set
+`--allow-edits --state /PRIVATE/approvals.sqlite3 --import-root /ALLOWED/MEDIA
+--output-root /ALLOWED/EXPORTS`. Use exact private roots, never filesystem root.
+Every edit needs an exact one-use Mac-local approval and a registered copied
+timeline (except the operation creating that copy). Remote confirmation alone
+cannot authorize a mutation. Preparation runs full Python validation on the worker
+without connecting to or editing Resolve. The published schemas are generated from
+the same Python models; schema parity is regression-tested. Python/Node digest
+verification uses RFC8785 canonical JSON including floats/defaults/Unicode. Upgrading
+changes older plan digests; obtain new explicit approvals, never reset consumed ones.
+Use documented Resolve scripting environment from the root README. Session must be renewed explicitly; losing a response never
 requeues a claimed job. Identical completion receipts are idempotent only while
 unexpired; wrong lease, changed result, unclaimed or expired receipts fail closed.
 
 Before adding the connector to Grok Bot, approve its exact `/mcp` URL and private
 Authorization header through the account confirmation widget. No endpoint or
 secret is hardcoded in this repository. Read-only live testing is not a production
-load/abuse test. Native disposable-project edits still need separate safe project
-readiness; do not touch an open original project.
+load/abuse test. Native edits require explicit safe-project readiness. Initial synthetic tests used
+an entirely separate project and working timeline. Never apply tests to an open
+original; preserve saved originals and create uniquely named backups/copies first.
 
 Sources: https://neon.com/pricing and
 https://neon.com/docs/compute/functions/overview

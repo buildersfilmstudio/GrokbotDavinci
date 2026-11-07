@@ -1,7 +1,7 @@
 """Typed, finite edit vocabulary. No property/method/code passthrough."""
 
+import rfc8785
 import hashlib
-import json
 import uuid
 from typing import Annotated, Literal
 from pydantic import Field, TypeAdapter, model_validator
@@ -319,12 +319,22 @@ def make_plan(project_id, timeline_id, action):
     )
 
 
+class Preparation(StrictModel):
+    project_id: Identifier
+    timeline_id: Identifier
+    action: Action
+
+
+def prepare(payload):
+    request = Preparation.model_validate(payload)
+    plan = make_plan(request.project_id, request.timeline_id, request.action)
+    return {
+        "plan": plan.model_dump(mode="json"),
+        "digest": digest(plan),
+        "requires_local_approval": True,
+    }
+
+
 def digest(plan):
-    return hashlib.sha256(
-        json.dumps(
-            plan.model_dump(mode="json"),
-            sort_keys=True,
-            separators=(",", ":"),
-            allow_nan=False,
-        ).encode()
-    ).hexdigest()
+    # RFC8785 makes the same numeric/Unicode JSON hash on Python and Node.js.
+    return hashlib.sha256(rfc8785.dumps(plan.model_dump(mode="json"))).hexdigest()

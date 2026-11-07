@@ -47,6 +47,7 @@ class Queue:
             "media",
             "inspect",
             "edit",
+            "prepare",
         ):
             raise QueueError("unsupported_operation")
         payload = payload or {}

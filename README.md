@@ -2,7 +2,7 @@
 
 An original, **read-only first** MCP connector for DaVinci Resolve Studio on a Mac.
 No Tailscale, VPN, inbound Mac port, public Resolve API, or video upload required.
-This is a working local/mock-tested implementation, **not a deployed service**.
+The Neon Free relay is deployed; scoped native editing validation is in progress.
 
 ```text
 Grok Bot -- HTTPS + CLIENT token --> hosted relay /mcp
@@ -12,23 +12,23 @@ Grok Bot -- HTTPS + CLIENT token --> hosted relay /mcp
                                    Mac worker --> official local Resolve scripting API
 ```
 
-The hosted relay implements standard MCP Streamable HTTP using the official
-Python SDK. The Mac worker is a separate process and opens **no listening socket**.
+Both relay implementations use official SDK standard MCP Streamable HTTP.
+The deployed Neon relay uses TypeScript/Postgres; the alternative Python relay uses SQLite. The Mac worker is a separate process and opens **no listening socket**.
 Video stays on the Mac; requested project, timeline and clip names leave it.
 Anyone holding the client token can request these reads while the worker is running.
 This is not an official Blackmagic or Grok Bot product.
 
-## Hosting update: v0.3 Neon Free
+## Hosting update: v0.4 Neon Free
 
-See [neon-relay/README.md](neon-relay/README.md) for the separate TypeScript/Postgres
-relay deployed on Neon Free. **Its current live scope is five read-only tools**;
-the seven-tool/14-action Python relay below remains locally/mock tested and is not
-the live Neon editing surface. Read-only HTTPS → Mac version/project/timeline
-roundtrips are now live-verified. Remote editing port and disposable native edit
-validation remain pending. Worker sessions expire after30minutes to preserve free
-budgets; no always-on polling or Tailscale required.
+See [neon-relay/README.md](neon-relay/README.md) for the deployed TypeScript/Postgres
+relay. The live HTTPS SDK initialization and discovery now verify all **seven tools**,
+including `prepare_edit` and `execute_edit` with the same 14 typed actions as Python.
+Version/project/timeline reads were live-tested through the outbound Mac worker.
+Invalid/missing bearer credentials return401. Discovery is not an editing roundtrip.
+Worker sessions expire after30minutes; no always-on polling or Tailscale required.
+Existing connected clients may need tool discovery refreshed, not a new endpoint.
 
-## Python relay implemented tools (v0.2)
+## Implemented tools (v0.4, both relays)
 
 Seven MCP tools: `resolve_version`, `current_project`, `current_timeline`,
 `current_media_bin`, `inspect_resolve`, `prepare_edit`, and `execute_edit`.
@@ -40,9 +40,23 @@ or approve anything. `execute_edit` queues only that exact plan after explicit
 
 ### Capability matrix
 
-All rows below are implemented and mock-tested, **none live-verified in Resolve
-by this connector**. Native methods are feature-detected; unsupported versions
-fail closed. This is useful supported-API coverage, **not full GUI parity**.
+All rows are implemented and mock-tested. On Studio21.1 / Python3.14, native tests
+in a new disposable project successfully duplicated a working timeline, added a
+track, imported synthetic PNG/WAV, appended video and audio, transformed a clip,
+added a marker, set/read back voice isolation and applied CDL in a local grade
+version. These are API-level tests, not independent visual/audio-quality validation.
+
+Initial native Fusion/title tests exposed Fusion's **void** setter return values;
+the worker now verifies GetInput, Link connections and numeric keyframe readbacks
+instead of requiring boolean returns. Regression tests pass, but the native retest
+was interrupted by Mac disconnection: Fusion/title/render completion is **not yet
+verified**. A synthetic2-point LUT was rejected; LUT support remains unverified.
+Fairlight preset application is untested because no saved presets were present.
+Original user project/media were not edited; only a separate disposable project
+was used. No violin score/highlight editing has been performed.
+
+Native methods are feature-detected; unsupported versions fail closed. This is
+useful supported-API coverage, **not full GUI parity**.
 
 | Typed action | Implemented scope / limits |
 |---|---|
@@ -75,7 +89,10 @@ and saved presets—not an invented volume/pan API. A finished violin lesson wor
 still needs explicit media/score decisions, native validation, and additional scoped
 operations where required. No raw API/shell/eval/file-download escape hatch exists.
 
-## 1. Choose hosting (not provisioned by this repository)
+## Alternative Python/SQLite hosting: 1. Choose hosting
+
+The following sections describe the optional Python relay, not Neon deployment.
+For the deployed Free route use the Neon README above.
 
 Use one always-on Linux container/VM with a persistent disk and managed HTTPS
 termination (for example a container host or an existing VPS behind its HTTPS

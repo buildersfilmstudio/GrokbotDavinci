@@ -96,9 +96,9 @@ test("SDK initialization and read-only tools list, durable quota", async () => {
     }),
   );
   const data: any = await listed.json();
-  assert.equal(data.result.tools.length, 5);
+  assert.equal(data.result.tools.length, 7);
   assert.equal(calls, 2);
-  assert.ok(data.result.tools.every((t: any) => !t.name.includes("edit")));
+  assert.ok(data.result.tools.some((t: any) => t.name === "execute_edit"));
 });
 test("SDK tool returns actual worker result and errors honestly", async () => {
   let ops: string[] = [];
@@ -148,4 +148,99 @@ test("session signed grant and strict worker id", async () => {
   r.headers.set("x-worker-session", grant.session + "x");
   assert.equal((await app.fetch(r)).status, 403);
   assert.equal(claims, 1);
+});
+
+test("Python and Node RFC8785 digests agree for defaults, decimals and Unicode", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { default: canonicalize } = await import("canonicalize");
+  const { hash } = await import("../src/store.js");
+  const fixtures = JSON.parse(
+    await readFile(
+      new URL("./canonical-fixtures.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  for (const f of fixtures) assert.equal(hash(canonicalize(f.plan)!), f.digest);
+});
+
+test("typed prepare and exact-confirm execute preserve plan and failure status", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const fixtures = JSON.parse(
+    await readFile(
+      new URL("./canonical-fixtures.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const f = fixtures[0];
+  let jobs: any[] = [];
+  const app = createApp(
+    {
+      clientBudget: async () => {},
+      enqueue: async (op: string, payload: object) => {
+        jobs.push({ op, payload });
+        return "job";
+      },
+      result: async () => ({
+        ok: true,
+        result: {
+          plan: f.plan,
+          digest: f.digest,
+          requires_local_approval: true,
+        },
+      }),
+    } as unknown as Store,
+    cfg,
+  );
+  const call = async (name: string, args: object) => {
+    const r = await app.fetch(
+      req("/mcp", cfg.clientToken, {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name, arguments: args },
+      }),
+    );
+    return ((await r.json()) as any).result;
+  };
+  const prepared = await call("prepare_edit", {
+    project_id: "p",
+    timeline_id: "t",
+    action: { kind: "transform", clip_id: "clip1", pan: 0.0000001 },
+  });
+  assert.equal(prepared.isError, undefined);
+  assert.equal(jobs[0].op, "prepare");
+  assert.equal(
+    (await call("execute_edit", { plan: f.plan, confirmation: "yes" })).isError,
+    true,
+  );
+  assert.equal(jobs.length, 1);
+  await call("execute_edit", {
+    plan: f.plan,
+    confirmation: "EXECUTE " + f.digest,
+  });
+  assert.equal(jobs[1].op, "edit");
+  assert.deepEqual(jobs[1].payload, f.plan);
+  const changed = structuredClone(f.plan);
+  changed.timeline_id = "other";
+  assert.equal(
+    (
+      await call("execute_edit", {
+        plan: changed,
+        confirmation: "EXECUTE " + f.digest,
+      })
+    ).isError,
+    true,
+  );
+  assert.equal(jobs.length, 2);
+  assert.equal(
+    (
+      await call("prepare_edit", {
+        project_id: "p",
+        timeline_id: "t",
+        action: { kind: "eval", code: "bad" },
+      })
+    ).isError,
+    true,
+  );
+  assert.equal(jobs.length, 2);
 });

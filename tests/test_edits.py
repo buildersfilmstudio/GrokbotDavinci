@@ -17,20 +17,43 @@ class Node:
 
     def SetInput(self, key, value):
         self.inputs[key] = value
-        return True
+        return None  # Native Fusion void return
 
-    def GetInput(self, key):
-        return self.inputs.get(key)
+    def GetInput(self, key, time=None):
+        value = self.inputs.get(key)
+        return value.get(time) if time is not None else value
 
     def ConnectInput(self, key, source):
         self.connections.append((key, source))
-        return True
+        return None
+
+    def GetAttrs(self):
+        return {"TOOLS_Name": str(id(self))}
+
+    def GetInputList(self):
+        return {
+            i: MockPort(key, source) for i, (key, source) in enumerate(self.connections)
+        }
 
     def __setitem__(self, key, value):
         self.inputs[key] = value
 
     def __getitem__(self, key):
         return self.inputs[key]
+
+
+class MockPort:
+    def __init__(self, key, source):
+        self.key, self.source = key, source
+
+    def GetAttrs(self):
+        return {"INPS_ID": self.key}
+
+    def GetConnectedOutput(self):
+        return self
+
+    def GetTool(self):
+        return self.source
 
 
 class Comp:
@@ -652,3 +675,67 @@ def test_mutation_child_timeout_or_crash_reports_unknown(monkeypatch, crash):
     )
     process.terminate.assert_called_once()
     receiver.close.assert_called_once()
+
+
+def test_prepare_is_strict_pure_and_does_not_connect_to_resolve(monkeypatch):
+    from grokbot_davinci.worker import _read
+    from grokbot_davinci.edits import prepare
+    import grokbot_davinci.worker as module
+
+    monkeypatch.setattr(
+        module.ResolveAdapter,
+        "connect",
+        lambda: pytest.fail("prepare must not connect to Resolve"),
+    )
+    sender = Mock()
+    payload = {
+        "project_id": "project",
+        "timeline_id": "original",
+        "action": {"kind": "copy_timeline", "name": "Working"},
+    }
+    _read("prepare", sender, payload, EditPolicy())
+    result = sender.send.call_args.args[0]
+    assert result["ok"] and result["result"]["requires_local_approval"]
+    plan = Plan.model_validate(result["result"]["plan"])
+    assert result["result"]["digest"] == digest(plan)
+    with pytest.raises(ValueError):
+        prepare({**payload, "arbitrary_code": "bad"})
+
+
+def test_fusion_void_setter_requires_real_readback():
+    from grokbot_davinci.editor import set_fusion_input, connect_fusion_input
+
+    node = Node()
+    set_fusion_input(node, "Size", 0.1)
+    broken = Mock()
+    broken.GetInput.return_value = None
+    with pytest.raises(RuntimeError, match="readback"):
+        set_fusion_input(broken, "Size", 0.1)
+    connect_fusion_input(node, "Input", Node())
+    broken.GetInputList.return_value = {}
+    with pytest.raises(RuntimeError, match="connection_readback"):
+        connect_fusion_input(broken, "Input", Node())
+
+
+def test_neon_published_schemas_match_python_validation():
+    from pathlib import Path
+    from grokbot_davinci.edits import Preparation
+
+    schema = json.loads(
+        (Path(__file__).parents[1] / "neon-relay/src/schemas.json").read_text()
+    )
+    assert schema["preparation"] == Preparation.model_json_schema()
+    plan = Plan.model_json_schema()
+    definitions = plan.pop("$defs")
+    assert schema["execution"]["$defs"]["Plan"] == plan
+    for name, definition in definitions.items():
+        assert schema["execution"]["$defs"][name] == definition
+
+
+def test_fusion_connection_missing_names_cannot_verify():
+    from grokbot_davinci.editor import connect_fusion_input
+
+    target, source = Node(), Node()
+    source.GetAttrs = lambda: {}
+    with pytest.raises(RuntimeError, match="connection_readback"):
+        connect_fusion_input(target, "Input", source)
