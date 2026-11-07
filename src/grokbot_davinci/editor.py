@@ -211,7 +211,11 @@ class Editor:
                 raise PermissionError("only_cube_luts_allowed")
         if a.kind == "queue_render":
             self.policy.checked_path(a.directory, True)
-            codecs = method(p, "GetRenderCodecs")(a.format) or {}
+            method(p, "LoadRenderPreset")
+            if a.preset not in (method(p, "GetRenderPresetList")() or []):
+                raise ValueError("render_preset_not_available")
+            catalog = "GetRenderCodecs" if a.export_video else "GetAudioRenderCodecs"
+            codecs = method(p, catalog)(a.format) or {}
             if a.codec not in codecs.values():
                 raise ValueError("codec_not_available_for_format")
         if a.kind == "voice_isolation":
@@ -374,7 +378,16 @@ class Editor:
             # A fresh command-owned directory avoids existing files and future overwrite.
             output = parent / ("GBD_" + plan.command_id)
             output.mkdir(mode=0o700, exist_ok=False)
-            success(p.SetCurrentRenderFormatAndCodec(a.format, a.codec))
+            # Explicitly pin a known preset. Resolve21 can silently retain Audio Only
+            # state even when ExportVideo=True and queue readbacks claim video.
+            success(p.LoadRenderPreset(a.preset))
+            if a.export_video:
+                success(p.SetCurrentRenderFormatAndCodec(a.format, a.codec))
+            audio = (
+                {"AudioFormat": a.format, "AudioCodec": a.codec}
+                if not a.export_video
+                else {}
+            )
             success(
                 p.SetRenderSettings(
                     {
@@ -383,6 +396,7 @@ class Editor:
                         "SelectAllFrames": True,
                         "ExportVideo": a.export_video,
                         "ExportAudio": a.export_audio,
+                        **audio,
                     }
                 )
             )
@@ -390,7 +404,12 @@ class Editor:
             if not job:
                 raise RuntimeError("render_queue_failed")
             store.own_render(plan.project_id, plan.timeline_id, str(job))
-            return {"job_id": str(job), "output_directory_name": output.name}
+            return {
+                "job_id": str(job),
+                "output_directory_name": output.name,
+                "preset_pinned": a.preset,
+                "warning": "A completed job is not proof of output streams. Independently probe rendered media before delivery.",
+            }
         if kind == "start_render":
             store.claim_render_once(plan.project_id, plan.timeline_id, a.job_id)
             # Never start all queued jobs. This call starts only the approved owned job.

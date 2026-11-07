@@ -74,7 +74,7 @@ ONLY the returned exact invocation hostname after reading `get_function`. During
 rollout, old isolates may briefly serve421 responses; do not disable Host checks.
 Once stable, require full SDK initialize/list/read tests and401 rejection tests.
 
-On Mac, install the reviewed0.4 wheel, chmod600 token/session files; run worker:
+On Mac, install the reviewed0.4.1 wheel, chmod600 token/session files; run worker:
 
 ```
 grokbot-davinci-worker --relay https://ACTUAL-INVOCATION-HOST \
@@ -105,3 +105,10 @@ original; preserve saved originals and create uniquely named backups/copies firs
 
 Sources: https://neon.com/pricing and
 https://neon.com/docs/compute/functions/overview
+
+Render plans now include the exact installed preset (v0.4.1), populated before
+approval/digest calculation. Pinning avoids Resolve21 inherited Audio Only state.
+Audio exports validate GetAudioRenderCodecs, video exports GetRenderCodecs. Always
+probe completed artifacts for the requested streams; API success alone is not proof.
+Regenerate schemas after model changes with `PYTHONPATH=src python
+scripts/generate_neon_schemas.py` from the repository root.

@@ -158,6 +158,9 @@ def env(tmp_path):
             "ApplyFairlightPresetToCurrentTimeline",
             "GetRenderCodecs",
             "SetCurrentRenderFormatAndCodec",
+            "LoadRenderPreset",
+            "GetRenderPresetList",
+            "GetAudioRenderCodecs",
             "SetRenderSettings",
             "AddRenderJob",
             "StartRendering",
@@ -174,10 +177,13 @@ def env(tmp_path):
         "SetCurrentTimeline",
         "ApplyFairlightPresetToCurrentTimeline",
         "SetCurrentRenderFormatAndCodec",
+        "LoadRenderPreset",
         "SetRenderSettings",
         "StartRendering",
     ):
         getattr(p, name).return_value = True
+    p.GetRenderPresetList.return_value = ["H.264 Master", "Audio Only"]
+    p.GetAudioRenderCodecs.return_value = {"Linear PCM": "lpcm"}
     r = Mock(spec=["GetProjectManager", "GetVersion", "GetFairlightPresets"])
     r.GetProjectManager.return_value.GetCurrentProject.return_value = p
     r.GetVersion.return_value = [21, 1, 0, 17, ""]
@@ -739,3 +745,86 @@ def test_fusion_connection_missing_names_cannot_verify():
     source.GetAttrs = lambda: {}
     with pytest.raises(RuntimeError, match="connection_readback"):
         connect_fusion_input(target, "Input", source)
+
+
+def test_render_streams_and_explicit_presets():
+    video = ACTION.validate_python(
+        {
+            "kind": "queue_render",
+            "directory": "/output",
+            "name": "preview",
+            "format": "mp4",
+            "codec": "H264",
+        }
+    )
+    assert video.preset == "H.264 Master"
+    audio = ACTION.validate_python(
+        {
+            "kind": "queue_render",
+            "directory": "/output",
+            "name": "audio",
+            "format": "wav",
+            "codec": "lpcm",
+            "export_video": False,
+        }
+    )
+    assert audio.preset == "Audio Only"
+    with pytest.raises(ValueError, match="WAV cannot contain video"):
+        ACTION.validate_python(
+            {
+                "kind": "queue_render",
+                "directory": "/output",
+                "name": "bad",
+                "format": "wav",
+                "codec": "lpcm",
+            }
+        )
+    with pytest.raises(ValueError, match="at least one output"):
+        ACTION.validate_python(
+            {
+                "kind": "queue_render",
+                "directory": "/output",
+                "name": "bad",
+                "format": "wav",
+                "codec": "lpcm",
+                "export_video": False,
+                "export_audio": False,
+            }
+        )
+
+
+def test_audio_render_uses_audio_catalogue_and_pinned_preset(env):
+    result, _ = run(
+        env,
+        {
+            "kind": "queue_render",
+            "directory": str(env["output"]),
+            "name": "analysis",
+            "format": "wav",
+            "codec": "lpcm",
+            "export_video": False,
+        },
+    )
+    env["p"].GetAudioRenderCodecs.assert_called_once_with("wav")
+    env["p"].LoadRenderPreset.assert_called_once_with("Audio Only")
+    env["p"].SetCurrentRenderFormatAndCodec.assert_not_called()
+    settings = env["p"].SetRenderSettings.call_args.args[0]
+    assert settings["AudioFormat"] == "wav" and settings["AudioCodec"] == "lpcm"
+    assert result["preset_pinned"] == "Audio Only"
+
+
+def test_missing_preset_fails_before_render_mutation(env):
+    with pytest.raises(ValueError, match="render_preset_not_available"):
+        run(
+            env,
+            {
+                "kind": "queue_render",
+                "directory": str(env["output"]),
+                "name": "preview",
+                "format": "mp4",
+                "codec": "H264",
+                "preset": "Uninstalled preset",
+            },
+        )
+    env["p"].LoadRenderPreset.assert_not_called()
+    env["p"].AddRenderJob.assert_not_called()

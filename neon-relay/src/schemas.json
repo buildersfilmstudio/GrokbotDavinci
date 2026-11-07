@@ -494,6 +494,20 @@
             "default": true,
             "title": "Export Audio",
             "type": "boolean"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preset"
           }
         },
         "required": [
@@ -1312,6 +1326,20 @@
             "default": true,
             "title": "Export Audio",
             "type": "boolean"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preset"
           }
         },
         "required": [

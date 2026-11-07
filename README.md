@@ -46,14 +46,25 @@ track, imported synthetic PNG/WAV, appended video and audio, transformed a clip,
 added a marker, set/read back voice isolation and applied CDL in a local grade
 version. These are API-level tests, not independent visual/audio-quality validation.
 
-Initial native Fusion/title tests exposed Fusion's **void** setter return values;
-the worker now verifies GetInput, Link connections and numeric keyframe readbacks
-instead of requiring boolean returns. Regression tests pass, but the native retest
-was interrupted by Mac disconnection: Fusion/title/render completion is **not yet
-verified**. A synthetic2-point LUT was rejected; LUT support remains unverified.
-Fairlight preset application is untested because no saved presets were present.
-Original user project/media were not edited; only a separate disposable project
-was used. No violin score/highlight editing has been performed.
+Follow-up native tests now verify a four-node Fusion composition, two scalar
+keyframes, graph connections and exact Text+ text readback. Synthetic render
+completed. Actual source preview was independently probed as H.264 video + AAC
+audio,1920x1080, and a frame was visually inspected. A harmless marker also passed
+live Neon prepare → exact Mac-local approval → remote execute → native readback.
+
+Resolve21 can inherit hidden Audio Only preset state even when ExportVideo=True
+and job metadata reports video. v0.4.1 pins an explicit installed preset before
+rendering (default H.264 Master for video, Audio Only for audio), validates the
+appropriate codec catalogue, and warns that output streams still need independent
+verification. WAV uses actual GetAudioRenderCodecs tokens, not video codec tokens.
+
+A synthetic2-point LUT was rejected; LUT support remains unverified. Fairlight
+preset application is untested because no saved presets were present. User's saved
+original was exported to a unique local backup and imported under a new project
+name; violin footage was identified by its actual source path and inspected frame,
+then a further working timeline was duplicated. Original media/audio unchanged.
+Score transcription and synchronized highlights are **not completed**. No guessed
+score was inserted. A lossless analysis-only audio render is ready for transcription.
 
 Native methods are feature-detected; unsupported versions fail closed. This is
 useful supported-API coverage, **not full GUI parity**.
@@ -72,7 +83,7 @@ useful supported-API coverage, **not full GUI parity**.
 | `cdl` | Clip/node CDL in a newly created and loaded local grade version |
 | `lut` | Existing `.cube` LUT under configured roots; new local grade version |
 | `fusion_build` | New clip composition, typed nodes, numeric keyframes and validated DAG connections |
-| `queue_render` | Supported format/codec; fresh command-owned output directory under allowed root |
+| `queue_render` | Explicit installed preset and supported video/audio codec; fresh command-owned output directory under allowed root |
 | `start_render` | Start only a job queued by this worker for this working timeline, once |
 
 Fusion allowlist: Background, TextPlus, Merge, Transform, Blur, RectangleMask,
@@ -318,3 +329,6 @@ Original implementation, MIT licensed. No upstream community Resolve MCP code co
 The installed Studio 21 scripting README could not be read through the approved
 local-file access boundary during development. Public API references informed the
 implementation, but exact Mac/21.1 behavior remains an explicit native test gate.
+
+Native render-state caveat reference (observed and reproduced locally):
+https://github.com/samuelgursky/davinci-resolve-mcp/issues/123

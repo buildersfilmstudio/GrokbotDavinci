@@ -274,6 +274,17 @@ class QueueRender(StrictModel):
     codec: str = Field(pattern=r"^[A-Za-z0-9_ -]{1,64}$")
     export_video: bool = True
     export_audio: bool = True
+    preset: Name | None = None
+
+    @model_validator(mode="after")
+    def render_mode(self):
+        if not self.export_video and not self.export_audio:
+            raise ValueError("at least one output stream required")
+        if self.export_video and self.format == "wav":
+            raise ValueError("WAV cannot contain video")
+        if self.preset is None:
+            self.preset = "H.264 Master" if self.export_video else "Audio Only"
+        return self
 
 
 class StartRender(StrictModel):
