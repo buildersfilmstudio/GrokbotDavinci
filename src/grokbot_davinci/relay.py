@@ -13,7 +13,8 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 from pydantic import ValidationError
-from .protocol import Claim, Completion, MAX_BODY
+from .protocol import Claim, Completion, MAX_BODY, Inspection
+from .edits import Action, Plan, digest, make_plan
 from .queue import Queue, QueueError
 
 
@@ -133,15 +134,23 @@ def create_app(config: Config):
         ),
     )
 
-    async def query(operation):
-        job_id = queue.enqueue(operation)
+    async def query(operation, payload=None):
+        job_id = queue.enqueue(operation, payload)
         try:
             async with asyncio.timeout(config.ttl + 1):
                 while True:
                     result = queue.result(job_id)
                     if result is not None:
                         if not result["ok"]:
-                            raise QueueError("worker_read_failed")
+                            raise QueueError(
+                                "worker_operation_failed: "
+                                + str(result["result"].get("error", "unknown"))
+                                + (
+                                    "; mutation may be partial, inspect working copy; approval never rearmed"
+                                    if operation == "edit"
+                                    else ""
+                                )
+                            )
                         return result["result"]
                     await asyncio.sleep(0.1)
         finally:
@@ -166,6 +175,35 @@ def create_app(config: Config):
     async def current_media_bin() -> dict:
         """Read at most 100 current-bin clip names, never media paths or file contents."""
         return await query("media")
+
+    @mcp.tool()
+    async def inspect_resolve(request: Inspection) -> dict:
+        """Read stable IDs/inventory, Fusion node types, audio state, render formats or capabilities."""
+        return await query("inspect", request.model_dump(mode="json"))
+
+    @mcp.tool()
+    async def prepare_edit(project_id: str, timeline_id: str, action: Action) -> dict:
+        """Preview an exact typed mutation. DOES NOT execute or approve it. Save the returned
+        plan on the Mac and approve locally; worker opt-in and one-use approval are mandatory.
+        First use copy_timeline; all other edits require its registered working copy.
+        """
+        plan = make_plan(project_id, timeline_id, action)
+        return {
+            "plan": plan.model_dump(mode="json"),
+            "digest": digest(plan),
+            "local_approval_required": True,
+            "warning": "Partial native edits are possible; never blindly retry after timeout.",
+        }
+
+    @mcp.tool()
+    async def execute_edit(plan: Plan, confirmation: str) -> dict:
+        """Execute ONLY after user confirmation of this exact plan AND Mac-local approval.
+        confirmation must equal EXECUTE followed by a space and the prepare_edit digest.
+        Never reissue an edit after uncertain completion: inspect the working copy instead.
+        """
+        if confirmation != "EXECUTE " + digest(plan):
+            raise ValueError("exact_plan_confirmation_required")
+        return await query("edit", plan.model_dump(mode="json"))
 
     async def health(request):
         return JSONResponse({"status": "ok"})

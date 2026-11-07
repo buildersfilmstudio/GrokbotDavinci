@@ -3,6 +3,7 @@
 import argparse
 import json
 import multiprocessing
+import os
 import stat
 from pathlib import Path
 import time
@@ -10,6 +11,8 @@ from urllib.parse import urlsplit
 import httpx
 from .adapter import ResolveAdapter
 from .protocol import Job, MAX_BODY, MAX_RESULT
+from .edits import Plan
+from .editor import Editor, EditPolicy
 
 
 def validate_url(url, allow_loopback_http=False):
@@ -34,32 +37,70 @@ def validate_url(url, allow_loopback_http=False):
     return url.rstrip("/")
 
 
-def _read(operation, sender):
+def _read(operation, sender, payload, policy):
     try:
-        result = ResolveAdapter.connect().execute(operation)
+        if operation == "edit" and not policy.enabled:
+            raise PermissionError("edits_disabled")
+        adapter = ResolveAdapter.connect()
+        if operation == "edit":
+            result = Editor(adapter.resolve, policy).execute(
+                Plan.model_validate(payload)
+            )
+        elif operation == "inspect":
+            result = adapter.inspect(payload)
+        else:
+            result = adapter.execute(operation)
         encoded = json.dumps(result, allow_nan=False).encode()
         if len(encoded) > MAX_RESULT:
             raise ValueError("too_large")
         sender.send(dict(ok=True, result=result))
     except Exception:
-        sender.send(dict(ok=False, result={"error": "resolve_read_failed"}))
+        sender.send(
+            dict(
+                ok=False,
+                result={
+                    "error": "operation_failed",
+                    "mutation_outcome": "unknown_or_partial_do_not_retry"
+                    if operation == "edit"
+                    else "not_applicable",
+                },
+            )
+        )
     finally:
         sender.close()
 
 
-def read_bounded(operation, timeout):
+def read_bounded(operation, timeout, payload=None, policy=None):
     """A stuck native scripting call cannot wedge the network worker indefinitely."""
     ctx = multiprocessing.get_context("spawn")
     receiver, sender = ctx.Pipe(duplex=False)
-    process = ctx.Process(target=_read, args=(operation, sender))
+    process = ctx.Process(
+        target=_read, args=(operation, sender, payload or {}, policy or EditPolicy())
+    )
     process.start()
     sender.close()
     try:
         if not receiver.poll(timeout):
-            return dict(ok=False, result={"error": "resolve_timeout"})
+            return dict(
+                ok=False,
+                result={
+                    "error": "resolve_timeout",
+                    "mutation_outcome": "unknown_or_partial_do_not_retry"
+                    if operation == "edit"
+                    else "not_applicable",
+                },
+            )
         return receiver.recv()
     except EOFError:
-        return dict(ok=False, result={"error": "resolve_unavailable"})
+        return dict(
+            ok=False,
+            result={
+                "error": "resolve_unavailable",
+                "mutation_outcome": "unknown_or_partial_do_not_retry"
+                if operation == "edit"
+                else "not_applicable",
+            },
+        )
     finally:
         receiver.close()
         process.join(timeout=0.2)
@@ -72,7 +113,10 @@ def read_bounded(operation, timeout):
 
 
 class Worker:
-    def __init__(self, client, worker_id, reader=read_bounded, clock=time.time):
+    def __init__(
+        self, client, worker_id, reader=read_bounded, clock=time.time, policy=None
+    ):
+        self.policy = policy or EditPolicy()
         self.client, self.worker_id, self.reader, self.clock = (
             client,
             worker_id,
@@ -100,7 +144,14 @@ class Worker:
         remaining = job.expires_at - self.clock()
         if remaining <= 1 or remaining > 61:
             raise ValueError("invalid_job_expiry")
-        result = self.reader(job.operation, min(8, remaining - 1))
+        if job.operation == "edit" and not self.policy.enabled:
+            result = {"ok": False, "result": {"error": "worker_edits_disabled"}}
+        elif job.operation in ("edit", "inspect"):
+            result = self.reader(
+                job.operation, min(8, remaining - 1), job.payload, self.policy
+            )
+        else:
+            result = self.reader(job.operation, min(8, remaining - 1))
         if len(json.dumps(result, allow_nan=False).encode()) > MAX_RESULT:
             result = dict(ok=False, result={"error": "result_too_large"})
         completion = dict(worker_id=self.worker_id, lease=job.lease, **result)
@@ -123,7 +174,33 @@ def main():
     parser.add_argument("--relay", required=True)
     parser.add_argument("--token-file", required=True)
     parser.add_argument("--worker-id", default="peters-mac")
+    parser.add_argument(
+        "--allow-edits",
+        action="store_true",
+        help="Still requires one-use local approval for EVERY command",
+    )
+    parser.add_argument(
+        "--state", help="Owner-only local approval/working-copy SQLite file"
+    )
+    parser.add_argument("--import-root", action="append", default=[])
+    parser.add_argument("--output-root", action="append", default=[])
     args = parser.parse_args()
+    policy = EditPolicy(
+        args.allow_edits,
+        args.state or "",
+        tuple(args.import_root),
+        tuple(args.output_root),
+    )
+    if args.allow_edits:
+        if not args.state:
+            raise SystemExit("--state required with --allow-edits")
+        state = Path(args.state)
+        state.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if state.parent.stat().st_mode & 0o077:
+            raise SystemExit("State directory must be owner-only")
+        if state.exists() and state.stat().st_mode & 0o077:
+            raise SystemExit("State file must be owner-only")
+        os.umask(0o077)
     url = validate_url(args.relay)
     path = Path(args.token_file)
     mode = path.stat().st_mode
@@ -139,7 +216,7 @@ def main():
         follow_redirects=False,
         trust_env=False,
     ) as client:
-        worker = Worker(client, args.worker_id)
+        worker = Worker(client, args.worker_id, policy=policy)
         while True:
             try:
                 worked = worker.run_once()

@@ -115,7 +115,7 @@ async def test_standard_mcp_end_to_end_mock_worker(tmp_path):
                     init = await session.initialize()
                     assert init.serverInfo.name == "GrokbotDavinci"
                     tools = await session.list_tools()
-                    assert len(tools.tools) == 4
+                    assert len(tools.tools) == 7
 
                     async def mock_worker():
                         async with httpx.AsyncClient(

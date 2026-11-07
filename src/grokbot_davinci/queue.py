@@ -25,7 +25,9 @@ class Queue:
         self.db.execute("""CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY, operation TEXT NOT NULL, worker TEXT NOT NULL,
             state TEXT NOT NULL, expires REAL NOT NULL, lease TEXT,
-            result TEXT, digest TEXT)""")
+            result TEXT, digest TEXT, payload TEXT)""")
+        if "payload" not in {r[1] for r in self.db.execute("PRAGMA table_info(jobs)")}:
+            self.db.execute("ALTER TABLE jobs ADD COLUMN payload TEXT")
         self.last_seen = 0.0
 
     def expire(self):
@@ -37,9 +39,30 @@ class Queue:
         # Receipt retention is bounded in time; expired IDs can never be reused.
         self.db.execute("DELETE FROM jobs WHERE expires<?", (now - 86400,))
 
-    def enqueue(self, operation):
-        if operation not in ("version", "project", "timeline", "media"):
+    def enqueue(self, operation, payload=None):
+        if operation not in (
+            "version",
+            "project",
+            "timeline",
+            "media",
+            "inspect",
+            "edit",
+        ):
             raise QueueError("unsupported_operation")
+        payload = payload or {}
+        # Reuse the closed wire schema before persisting any job payload.
+        from .protocol import Job
+
+        Job(
+            id=str(uuid.uuid4()),
+            operation=operation,
+            lease="validation-placeholder-0123456789012345",
+            expires_at=float(self.clock() + self.ttl),
+            payload=payload,
+        )
+        encoded_payload = json.dumps(payload, allow_nan=False, separators=(",", ":"))
+        if len(encoded_payload.encode()) > MAX_RESULT:
+            raise QueueError("payload_too_large")
         self.expire()
         if (
             self.db.execute(
@@ -51,8 +74,15 @@ class Queue:
             raise QueueError("queue_full")
         job_id = str(uuid.uuid4())
         self.db.execute(
-            "INSERT INTO jobs VALUES(?,?,?,?,?,NULL,NULL,NULL)",
-            (job_id, operation, self.worker_id, "queued", self.clock() + self.ttl),
+            "INSERT INTO jobs VALUES(?,?,?,?,?,NULL,NULL,NULL,?)",
+            (
+                job_id,
+                operation,
+                self.worker_id,
+                "queued",
+                self.clock() + self.ttl,
+                encoded_payload,
+            ),
         )
         return job_id
 
@@ -64,7 +94,7 @@ class Queue:
         try:
             self.expire()
             row = self.db.execute(
-                "SELECT id,operation,expires FROM jobs WHERE worker=? AND state='queued' ORDER BY rowid LIMIT 1",
+                "SELECT id,operation,expires,payload FROM jobs WHERE worker=? AND state='queued' ORDER BY rowid LIMIT 1",
                 (worker_id,),
             ).fetchone()
             if not row:
@@ -77,7 +107,13 @@ class Queue:
                 (hashlib.sha256(lease.encode()).hexdigest(), row[0]),
             )
             self.db.execute("COMMIT")
-            return dict(id=row[0], operation=row[1], expires_at=row[2], lease=lease)
+            return dict(
+                id=row[0],
+                operation=row[1],
+                expires_at=row[2],
+                lease=lease,
+                payload=json.loads(row[3] or "{}"),
+            )
         except BaseException:
             self.db.execute("ROLLBACK")
             raise

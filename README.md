@@ -18,20 +18,52 @@ Video stays on the Mac; requested project, timeline and clip names leave it.
 Anyone holding the client token can request these reads while the worker is running.
 This is not an official Blackmagic or Grok Bot product.
 
-## Implemented tools
+## Implemented tools (v0.2)
 
-| Tool | Read-only output |
+Seven MCP tools: `resolve_version`, `current_project`, `current_timeline`,
+`current_media_bin`, `inspect_resolve`, `prepare_edit`, and `execute_edit`.
+The first five only inspect. `inspect_resolve` accepts capabilities, inventory,
+audio, fusion or render domains, providing stable IDs for scoped edits.
+`prepare_edit` validates and returns a command plan/digest; it does not execute
+or approve anything. `execute_edit` queues only that exact plan after explicit
+`EXECUTE <digest>` confirmation. The Mac independently requires a local approval.
+
+### Capability matrix
+
+All rows below are implemented and mock-tested, **none live-verified in Resolve
+by this connector**. Native methods are feature-detected; unsupported versions
+fail closed. This is useful supported-API coverage, **not full GUI parity**.
+
+| Typed action | Implemented scope / limits |
 |---|---|
-| `resolve_version` | Product and version |
-| `current_project` | Current project name, timeline count |
-| `current_timeline` | Current timeline name, frame bounds, track counts |
-| `current_media_bin` | Current bin name and at most 100 clip names |
+| `copy_timeline` | Duplicate under a new non-conflicting name, register and activate working copy |
+| `track` | Add video/stereo audio track; name, enable/disable, lock/unlock |
+| `append_clip` | Append existing current-bin media with bounded source frame range; video or audio |
+| `transform` | Clip pan, tilt, zoom, rotation, opacity; no arbitrary properties |
+| `marker` | Timeline marker with name, note, color, duration |
+| `title` | Insert Text+ at timecode and set text; target track/duration follow native UI selection/defaults |
+| `import_media` | Explicit media files inside configured local roots, extension allowlist; no recursive browsing |
+| `voice_isolation` | Audio-track state/amount, Resolve 20.1+ and available API |
+| `fairlight_preset` | Apply an existing named preset, Resolve 20.2.2+ and available API |
+| `cdl` | Clip/node CDL in a newly created and loaded local grade version |
+| `lut` | Existing `.cube` LUT under configured roots; new local grade version |
+| `fusion_build` | New clip composition, typed nodes, numeric keyframes and validated DAG connections |
+| `queue_render` | Supported format/codec; fresh command-owned output directory under allowed root |
+| `start_render` | Start only a job queued by this worker for this working timeline, once |
 
-These tools never open, switch, save or modify projects. No arbitrary shell,
-Python execution, raw API calls, paths, media bytes or filesystem browsing tools.
-There are **no editing tools or edit-enable flag in v0.1**. The violin sheet-music
-workflow requires a separately reviewed, explicitly authorized edit capability;
-this version establishes the secure connection and read-only inspection first.
+Fusion allowlist: Background, TextPlus, Merge, Transform, Blur, RectangleMask,
+EllipseMask and MediaOut. Inputs are separately allowlisted by node type. Maximum
+24 nodes / 48 edges / 128 keyframes per animated control. No Loader/Saver, scripts,
+Fuses, custom/group nodes, expressions, arbitrary serialized compositions or generic
+method execution. Existing compositions are not edited.
+
+**Not implemented:** GUI-only ripple editing/transitions, broad Fairlight mixer/EQ/
+plugin automation, arbitrary Fusion nodes, automatic transcription/score generation,
+project deletion, replacing media, arbitrary scripting, or every color/Deliver GUI
+control. Audio edits here are real clip assembly, track controls, voice isolation
+and saved presets—not an invented volume/pan API. A finished violin lesson workflow
+still needs explicit media/score decisions, native validation, and additional scoped
+operations where required. No raw API/shell/eval/file-download escape hatch exists.
 
 ## 1. Choose hosting (not provisioned by this repository)
 
@@ -113,7 +145,7 @@ Use a maintained Python matching the Mac's architecture and supported by its
 Resolve build (Python 3.14 was locally verified against Peter's Studio 21.1 in
 setup work; this new adapter has **not** been run against that Mac).
 Resolve Studio must be running and allow **Local** external scripting. Use
-Blackmagic's installed `Developer/Scripting/README.txt` as the authoritative API
+Blackmagic's installed `Developer/Scripting/README.md (or README.txt on older versions)` as the authoritative API
 reference. Typical macOS environment:
 
 ```sh
@@ -136,6 +168,52 @@ Native API calls run in a spawned child with an 8-second maximum; timed-out chil
 are terminated, not retried. A timed-out job is never requeued. This is deliberately
 at-most-once execution: loss of a claim or completion may lose a read, but cannot
 trigger a replay. Repeating an MCP read creates a fresh bounded read request.
+
+## Local edit authorization (disabled by default)
+
+Create an owner-only state directory on the Mac, then explicitly start the worker
+with these additional flags (roots must be existing absolute local directories):
+
+```text
+--allow-edits --state /private/owner-only/resolve-approval.sqlite3
+--import-root /Users/yourname/Movies/Inputs
+--output-root /Users/yourname/Movies/Exports
+```
+
+1. Inspect stable project/timeline IDs. Prepare a `copy_timeline` command first.
+2. Save the exact returned `plan` JSON in a local plan file; inspect it on the Mac.
+3. On that Mac run:
+
+```sh
+/path/to/venv/bin/grokbot-davinci-approve \
+  --state /private/owner-only/resolve-approval.sqlite3 \
+  --plan-file /private/owner-only/plan.json
+```
+
+Type the displayed literal `APPROVE <digest>` only after checking the full plan.
+An approval lasts at most 300 seconds, is consumed atomically before mutation, and
+cannot be reissued for that command. Never grant approvals from relay requests
+automatically. There is no network approval endpoint.
+4. Call `execute_edit` with the same plan and `confirmation: EXECUTE <digest>`.
+5. Subsequent commands must target the locally registered working-copy ID, and
+require their own new plan, local approval and execute confirmation.
+
+A stolen client/relay credential alone cannot approve edits. Approvals bind the
+whole payload, command UUID, project and timeline. Expiry, partial failure, child
+termination or lost responses **never** automatically rearm/retry a mutation.
+`unknown_or_partial_do_not_retry` means inspect the working copy manually; a fresh
+command is a new authorized change, not a recovery guarantee. Results explicitly
+say `api_reported_applied` with `independent_verification: false`; success booleans
+are not proof of visual/audible correctness.
+
+**Protection limits:** timeline duplication is not a full project backup. Shared
+media-pool imports, Fairlight/native linked resources and project render settings
+can affect shared project state; approved operations do not rewrite source media.
+Use an expendable project copy for initial testing and independently back up work.
+Native Resolve plugins, fonts, presets, existing render settings and local filesystem
+are trusted. No atomic rollback is promised. Canonical root validation cannot defeat
+a malicious local user racing filesystem changes; secure the worker account/roots.
+Output folders are fresh and existing paths are not overwritten by this code.
 
 ## 5. Connect Grok Bot (after testing and approval)
 
@@ -170,7 +248,8 @@ error, never a fabricated success. `/healthz` is not proof of Mac connectivity.
   token can request allowed metadata. Mac process/user compromise is out of scope.
   No cryptographic device attestation or end-to-end encrypted job payloads.
 - Read results are a snapshot, not a lock on Resolve. The user can change the
-  current project while a read is queued. There is intentionally no edit surface.
+  current project while a read is queued. Edits verify current project/timeline IDs
+  immediately before mutation; this is not an atomic native GUI lock.
 
 ## Tests and real-world limitations
 
@@ -185,6 +264,10 @@ non-requeue, duplicate/conflicting completions, queue/result limits, closed API
 allowlist, wrong Host/Origin, oversized requests, read-only adapter mocks, worker
 receipt-only retries, invalid/expired jobs, and a real SDK client initialize → list
 tools → read → offline error through an in-process ASGI transport and mock worker.
+Mutation tests additionally cover every action kind, scoped working copies, local
+approval consumption/expiry/replay across restart, denied paths/nodes/code, Fusion
+keyframes/connections, audio version gates, render ownership/start-once and actual
+SDK prepare → confirmation → local-approved mock edit over ASGI.
 They do not require Resolve, a paid host or Tailscale.
 
 **Not yet tested:** live Resolve adapter on macOS, actual internet HTTPS deployment,
@@ -195,6 +278,8 @@ in the PR, not implied for every platform.
 
 ## References
 
+- Official Fusion scripting guide: https://documents.blackmagicdesign.com/UserManuals/Fusion8_Scripting_Guide.pdf
+- Versioned community API reference (verify against installed docs): https://wheheohu.github.io/bmd_doc/ResolveAPI/21.0.4/resolve_api/Timeline
 - Official Python MCP SDK: https://github.com/modelcontextprotocol/python-sdk
 - Public SDK security settings: https://py.sdk.modelcontextprotocol.io/api/mcp/server/transport_security/
 - Blackmagic Resolve developer resources: https://www.blackmagicdesign.com/developer/
@@ -202,3 +287,7 @@ in the PR, not implied for every platform.
   `/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/`.
 
 Original implementation, MIT licensed. No upstream community Resolve MCP code copied.
+
+The installed Studio 21 scripting README could not be read through the approved
+local-file access boundary during development. Public API references informed the
+implementation, but exact Mac/21.1 behavior remains an explicit native test gate.
