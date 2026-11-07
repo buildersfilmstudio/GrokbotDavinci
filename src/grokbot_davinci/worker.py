@@ -150,8 +150,16 @@ class Worker:
         if job.operation == "edit" and not self.policy.enabled:
             result = {"ok": False, "result": {"error": "worker_edits_disabled"}}
         elif job.operation in ("edit", "inspect", "prepare"):
+            # Backup + import + readback is one finite, at-most-once operation.
+            # Only project copying gets a15s ceiling; every other native call stays8s.
+            bound = (
+                15
+                if job.operation == "edit"
+                and job.payload.get("action", {}).get("kind") == "copy_project"
+                else 8
+            )
             result = self.reader(
-                job.operation, min(8, remaining - 1), job.payload, self.policy
+                job.operation, min(bound, remaining - 1), job.payload, self.policy
             )
         else:
             result = self.reader(job.operation, min(8, remaining - 1))

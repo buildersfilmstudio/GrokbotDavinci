@@ -145,6 +145,35 @@
         "title": "CDL",
         "type": "object"
       },
+      "CopyProject": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "copy_project",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "backup_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Backup Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "backup_path"
+        ],
+        "title": "CopyProject",
+        "type": "object"
+      },
       "CopyTimeline": {
         "additionalProperties": false,
         "properties": {
@@ -546,6 +575,83 @@
           "codec"
         ],
         "title": "QueueRender",
+        "type": "object"
+      },
+      "RelinkMedia": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "relink_media",
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Media Id",
+            "type": "string"
+          },
+          "expected_old_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Expected Old Path",
+            "type": "string"
+          },
+          "new_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "New Path",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 2147483648,
+            "minimum": 1,
+            "title": "Size",
+            "type": "integer"
+          },
+          "expected_frames": {
+            "maximum": 100000000,
+            "minimum": 1,
+            "title": "Expected Frames",
+            "type": "integer"
+          },
+          "expected_fps": {
+            "exclusiveMinimum": 0,
+            "maximum": 240,
+            "title": "Expected Fps",
+            "type": "number"
+          },
+          "expected_resolution": {
+            "pattern": "^\\d{1,5}x\\d{1,5}$",
+            "title": "Expected Resolution",
+            "type": "string"
+          },
+          "expected_codec": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Expected Codec",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "media_id",
+          "expected_old_path",
+          "new_path",
+          "sha256",
+          "size",
+          "expected_frames",
+          "expected_fps",
+          "expected_resolution",
+          "expected_codec"
+        ],
+        "title": "RelinkMedia",
         "type": "object"
       },
       "StartRender": {
@@ -774,6 +880,7 @@
           "mapping": {
             "append_clip": "#/$defs/AppendClip",
             "cdl": "#/$defs/CDL",
+            "copy_project": "#/$defs/CopyProject",
             "copy_timeline": "#/$defs/CopyTimeline",
             "fairlight_preset": "#/$defs/FairlightPreset",
             "fusion_build": "#/$defs/FusionBuild",
@@ -781,6 +888,7 @@
             "lut": "#/$defs/LUT",
             "marker": "#/$defs/Marker",
             "queue_render": "#/$defs/QueueRender",
+            "relink_media": "#/$defs/RelinkMedia",
             "start_render": "#/$defs/StartRender",
             "title": "#/$defs/Title",
             "track": "#/$defs/TrackEdit",
@@ -792,6 +900,12 @@
         "oneOf": [
           {
             "$ref": "#/$defs/CopyTimeline"
+          },
+          {
+            "$ref": "#/$defs/CopyProject"
+          },
+          {
+            "$ref": "#/$defs/RelinkMedia"
           },
           {
             "$ref": "#/$defs/TrackEdit"
@@ -1003,6 +1117,35 @@
           "node"
         ],
         "title": "CDL",
+        "type": "object"
+      },
+      "CopyProject": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "copy_project",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "backup_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Backup Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "backup_path"
+        ],
+        "title": "CopyProject",
         "type": "object"
       },
       "CopyTimeline": {
@@ -1406,6 +1549,83 @@
           "codec"
         ],
         "title": "QueueRender",
+        "type": "object"
+      },
+      "RelinkMedia": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "relink_media",
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_:-]+$",
+            "title": "Media Id",
+            "type": "string"
+          },
+          "expected_old_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Expected Old Path",
+            "type": "string"
+          },
+          "new_path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "New Path",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 2147483648,
+            "minimum": 1,
+            "title": "Size",
+            "type": "integer"
+          },
+          "expected_frames": {
+            "maximum": 100000000,
+            "minimum": 1,
+            "title": "Expected Frames",
+            "type": "integer"
+          },
+          "expected_fps": {
+            "exclusiveMinimum": 0,
+            "maximum": 240,
+            "title": "Expected Fps",
+            "type": "number"
+          },
+          "expected_resolution": {
+            "pattern": "^\\d{1,5}x\\d{1,5}$",
+            "title": "Expected Resolution",
+            "type": "string"
+          },
+          "expected_codec": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Expected Codec",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "media_id",
+          "expected_old_path",
+          "new_path",
+          "sha256",
+          "size",
+          "expected_frames",
+          "expected_fps",
+          "expected_resolution",
+          "expected_codec"
+        ],
+        "title": "RelinkMedia",
         "type": "object"
       },
       "StartRender": {
@@ -1639,6 +1859,7 @@
               "mapping": {
                 "append_clip": "#/$defs/AppendClip",
                 "cdl": "#/$defs/CDL",
+                "copy_project": "#/$defs/CopyProject",
                 "copy_timeline": "#/$defs/CopyTimeline",
                 "fairlight_preset": "#/$defs/FairlightPreset",
                 "fusion_build": "#/$defs/FusionBuild",
@@ -1646,6 +1867,7 @@
                 "lut": "#/$defs/LUT",
                 "marker": "#/$defs/Marker",
                 "queue_render": "#/$defs/QueueRender",
+                "relink_media": "#/$defs/RelinkMedia",
                 "start_render": "#/$defs/StartRender",
                 "title": "#/$defs/Title",
                 "track": "#/$defs/TrackEdit",
@@ -1657,6 +1879,12 @@
             "oneOf": [
               {
                 "$ref": "#/$defs/CopyTimeline"
+              },
+              {
+                "$ref": "#/$defs/CopyProject"
+              },
+              {
+                "$ref": "#/$defs/RelinkMedia"
               },
               {
                 "$ref": "#/$defs/TrackEdit"

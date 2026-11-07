@@ -74,6 +74,8 @@ class ResolveAdapter:
                 "read_domains": ["inventory", "audio", "fusion", "render"],
                 "edit_kinds": [
                     "copy_timeline",
+                    "copy_project",
+                    "relink_media",
                     "track",
                     "append_clip",
                     "transform",

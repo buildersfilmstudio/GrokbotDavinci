@@ -32,6 +32,9 @@ class ApprovalStore:
             "CREATE TABLE IF NOT EXISTS renders (project TEXT, timeline TEXT, job TEXT PRIMARY KEY, started INTEGER NOT NULL DEFAULT 0)"
         )
 
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS project_copies (project TEXT PRIMARY KEY, source TEXT NOT NULL, backup TEXT NOT NULL, backup_sha TEXT NOT NULL)"
+        )
         if "started" not in {
             row[1] for row in self.db.execute("PRAGMA table_info(renders)")
         }:
@@ -62,6 +65,23 @@ class ApprovalStore:
             "SELECT 1 FROM copies WHERE project=? AND timeline=?", (project, timeline)
         ).fetchone():
             raise PermissionError("only_connector_working_copies_can_be_edited")
+
+    def own_project(self, project, source, backup, backup_sha):
+        if project == source:
+            raise PermissionError("project_copy_identity_not_distinct")
+        self.db.execute(
+            "INSERT INTO project_copies VALUES(?,?,?,?)",
+            (project, source, backup, backup_sha),
+        )
+
+    def require_project(self, project):
+        row = self.db.execute(
+            "SELECT source,backup,backup_sha FROM project_copies WHERE project=?",
+            (project,),
+        ).fetchone()
+        if not row or row[0] == project:
+            raise PermissionError("only_isolated_project_copies_can_be_relinked")
+        return row
 
     def own_render(self, project, timeline, job):
         self.db.execute(

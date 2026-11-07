@@ -308,11 +308,11 @@ keyframes/connections, audio version gates, render ownership/start-once and actu
 SDK prepare → confirmation → local-approved mock edit over ASGI.
 They do not require Resolve, a paid host or Tailscale.
 
-**Not yet tested:** live Resolve adapter on macOS, actual internet HTTPS deployment,
-provider proxy compatibility, token provisioning into Grok Bot, real session
-reconnects or production load. Do not label the connector connected until those
-steps pass. CI matrix covers Python 3.12/3.13/3.14; local test execution is recorded
-in the PR, not implied for every platform.
+**Deployment/native status:** the dedicated authenticated Neon HTTPS service and
+bounded outbound macOS worker have been exercised together. This does not imply
+production-load validation or live verification of every action. Feature-specific
+native results are recorded below; CI mocks are not native integration evidence.
+CI covers Python 3.12/3.13/3.14; local execution is not implied for every platform.
 
 ## References
 
@@ -353,3 +353,38 @@ These are synthetic test positions, not user-original edits.
 Actual violin transcription is not complete: independent Spotify Basic Pitch and
 YIN/envelope analysis expose repeated-bow segmentation disagreements. No guessed
 published score or unverified note sequence was inserted into original footage.
+
+## v0.6: isolated-project original-media relink
+
+`copy_project` requires an exact unique `.drp` backup path inside configured output
+roots and a new project name. Its one-use local approval covers saving existing
+source edits, exporting the backup, importing/loading a **separate project**,
+verifying its edit structure and registering only that new project for relinking.
+An ordinary timeline working copy does NOT authorize project-wide media relinking.
+
+`relink_media` initially supports verified video originals only. Its exact approved
+plan binds MediaPool ID, offline old path, full new path, SHA256, size and expected
+frames/FPS/resolution/codec. Candidate roots are canonical allowlists; symlinks,
+wrong identities/hashes/metadata and ambiguous case-insensitive basenames fail
+closed. The copied project's recorded DRP must still match its SHA256.
+Only `MediaPool.RelinkClips([oneItem], exactParent)` runs, followed by path/ID,
+missing-list and complete bounded edit-structure readback and SaveProject.
+No media is moved, deleted, replaced or rendered. Errors consume approval; never
+retry an unknown/partial outcome. Backup/copy failure leaves the source intact
+and the new copy unregistered. DRP includes grades; structure verification checks
+clip properties and current grade versions, not opaque grade graph byte equality.
+
+This feature is separately locally approved, not an expansion to arbitrary API
+execution. Original projects are rejected even when they contain a registered
+timeline copy. Both relay schemas and reviewed Mac wheel must be upgraded together.
+
+Project-copy execution alone has a 15-second native ceiling (including backup/import/readback), clipped to its existing job expiry. Other operations retain 8 seconds; no expiry/retry/session limits are relaxed.
+
+Native v0.6 acceptance: an approved DRP backup and distinct project import completed
+through deployed standard StreamableHTTP MCP. A fingerprint-verified video relink
+reduced missing files from 5 to 4 in that copy. Independent subsequent macOS API
+readback confirmed the exact new path and unchanged edit-structure digest across
+all 23 timelines, and rejected original-project relink ownership. The other four
+offline originals were deliberately left unresolved. No video render, file move or
+media deletion occurred. This is one verified video-original case, not proof that
+all formats, grades or arbitrary projects have identical behavior.

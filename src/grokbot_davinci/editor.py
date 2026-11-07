@@ -144,7 +144,11 @@ class Editor:
         action = plan.action
         store = ApprovalStore(self.policy.state)
         try:
-            if action.kind != "copy_timeline":
+            if action.kind == "relink_media":
+                from .relink import require_backup
+
+                require_backup(store, plan.project_id, self.policy)
+            elif action.kind not in ("copy_timeline", "copy_project"):
                 store.require_copy(plan.project_id, plan.timeline_id)
             self.preflight(p, t, action)
             # Atomic durable consumption BEFORE first mutation. Errors never rearm it.
@@ -161,6 +165,10 @@ class Editor:
             store.close()
 
     def preflight(self, p, t, a):
+        if a.kind in ("copy_project", "relink_media"):
+            from .relink import preflight
+
+            return preflight(self, p, a)
         required = {
             "copy_timeline": (t, "DuplicateTimeline"),
             "track": (
@@ -277,6 +285,10 @@ class Editor:
 
     def apply(self, p, t, a, plan, store):
         kind = a.kind
+        if kind in ("copy_project", "relink_media"):
+            from .relink import apply
+
+            return apply(self, p, a, store)
         if kind == "copy_timeline":
             # Do not overwrite existing named timelines.
             if any(

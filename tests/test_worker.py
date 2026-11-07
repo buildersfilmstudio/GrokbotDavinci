@@ -110,3 +110,78 @@ def test_worker_offline_no_execution():
         assert not Worker(
             c, "mac", reader=lambda *_: pytest.fail("must not execute")
         ).run_once()
+
+
+@pytest.mark.parametrize(
+    "operation,kind,remaining,expected",
+    [
+        ("edit", "copy_project", 30, 15),
+        ("edit", "relink_media", 30, 8),
+        ("prepare", "copy_project", 30, 8),
+        ("edit", "copy_project", 5, 4),
+    ],
+)
+def test_only_project_backup_copy_gets_bounded_extension(
+    operation, kind, remaining, expected
+):
+    from grokbot_davinci.editor import EditPolicy
+
+    calls = []
+    action = (
+        {
+            "kind": "copy_project",
+            "name": "Protected copy",
+            "backup_path": "/safe/backup.drp",
+        }
+        if kind == "copy_project"
+        else {
+            "kind": "relink_media",
+            "media_id": "media-123",
+            "expected_old_path": "/missing/clip.mov",
+            "new_path": "/safe/clip.mov",
+            "sha256": "a" * 64,
+            "size": 100,
+            "expected_frames": 139,
+            "expected_fps": 23.976,
+            "expected_resolution": "1920x1080",
+            "expected_codec": "Apple ProRes 4444",
+        }
+    )
+    payload = {
+        "project_id": "project-123",
+        "timeline_id": "timeline-123",
+        "action": action,
+    }
+    if operation == "edit":
+        payload["command_id"] = "abcdef01-1234-4234-8234-123456789abc"
+
+    def handler(request):
+        if request.url.path == "/worker/claim":
+            return httpx.Response(
+                200,
+                json={
+                    "job": {
+                        "id": "12345678-1234-4234-8234-123456789abc",
+                        "operation": operation,
+                        "lease": "l" * 40,
+                        "expires_at": 1000 + remaining,
+                        "payload": payload,
+                    }
+                },
+            )
+        return httpx.Response(200, json={"status": "completed"})
+
+    with httpx.Client(
+        transport=httpx.MockTransport(handler), base_url="https://relay.example"
+    ) as client:
+        worker = Worker(
+            client,
+            "mac",
+            clock=lambda: 1000,
+            policy=EditPolicy(enabled=True),
+            reader=lambda op, timeout, *_: (
+                calls.append(timeout) or {"ok": True, "result": {}}
+            ),
+        )
+        assert worker.run_once()
+    assert calls == [expected]

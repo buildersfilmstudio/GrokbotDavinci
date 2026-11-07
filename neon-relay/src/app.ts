@@ -149,7 +149,7 @@ export function createApp(store: Store, cfg: Config) {
         // Every authenticated MCP request gets a durable quota, including initialize/list.
         await store.clientBudget();
         const server = new Server(
-          { name: "grokbot-davinci-neon", version: "0.5.0" },
+          { name: "grokbot-davinci-neon", version: "0.6.0" },
           { capabilities: { tools: {} } },
         );
         async function query(op: string, payload = {}) {
@@ -205,7 +205,7 @@ export function createApp(store: Store, cfg: Config) {
           {
             name: "prepare_edit",
             description:
-              "Validate a typed scoped edit on the Mac and return exact plan/digest. Does not edit or grant approval. Supports 14 kinds: copy_timeline, track, append_clip, transform, marker, title, import_media, voice_isolation, fairlight_preset, cdl, lut, fusion_build, queue_render, start_render.",
+              "Validate a typed scoped edit on the Mac and return exact plan/digest. Does not edit or grant approval. Supports 16 kinds: copy_project, relink_media, copy_timeline, track, append_clip, transform, marker, title, import_media, voice_isolation, fairlight_preset, cdl, lut, fusion_build, queue_render, start_render.",
             inputSchema: schemas.preparation,
           },
           {

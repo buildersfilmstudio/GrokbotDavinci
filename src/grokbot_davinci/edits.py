@@ -20,6 +20,25 @@ class CopyTimeline(StrictModel):
     name: Name
 
 
+class CopyProject(StrictModel):
+    kind: Literal["copy_project"]
+    name: Name
+    backup_path: str = Field(min_length=1, max_length=4096)
+
+
+class RelinkMedia(StrictModel):
+    kind: Literal["relink_media"]
+    media_id: Identifier
+    expected_old_path: str = Field(min_length=1, max_length=4096)
+    new_path: str = Field(min_length=1, max_length=4096)
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    size: int = Field(ge=1, le=2147483648)
+    expected_frames: int = Field(ge=1, le=100000000)
+    expected_fps: float = Field(gt=0, le=240, allow_inf_nan=False)
+    expected_resolution: str = Field(pattern=r"^\d{1,5}x\d{1,5}$")
+    expected_codec: str = Field(min_length=1, max_length=128)
+
+
 class TrackEdit(StrictModel):
     kind: Literal["track"]
     track_type: Literal["video", "audio"]
@@ -302,6 +321,8 @@ class StartRender(StrictModel):
 
 Action = Annotated[
     CopyTimeline
+    | CopyProject
+    | RelinkMedia
     | TrackEdit
     | AppendClip
     | Transform
