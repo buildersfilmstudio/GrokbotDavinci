@@ -93,7 +93,14 @@ export class Store {
         "UPDATE gbd_sessions SET last_claim=extract(epoch from now()) WHERE id=$1 AND expires_at>extract(epoch from now()) AND last_claim<extract(epoch from now())-4 RETURNING id",
         [session],
       );
-      if (!admission.rowCount) throw Error("session_expired_or_poll_too_fast");
+      if (!admission.rowCount) {
+        const { rows: [active] } = await c.query(
+          "SELECT id FROM gbd_sessions WHERE id=$1 AND expires_at>extract(epoch from now())",
+          [session],
+        );
+        if (active) throw Error("poll_too_fast");
+        throw Error("session_expired");
+      }
       const lease = randomBytes(32).toString("base64url");
       const {
         rows: [j],

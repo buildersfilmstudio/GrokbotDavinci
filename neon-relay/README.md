@@ -112,3 +112,9 @@ Audio exports validate GetAudioRenderCodecs, video exports GetRenderCodecs. Alwa
 probe completed artifacts for the requested streams; API success alone is not proof.
 Regenerate schemas after model changes with `PYTHONPATH=src python
 scripts/generate_neon_schemas.py` from the repository root.
+
+Relay v0.4.2 distinguishes an authorized worker polling too soon (429 with
+Retry-After5) from an expired/unknown session (403). Rapid manual worker restarts
+can hit the existing four-second admission interval; this is not a credential
+failure and must not terminate the worker. Session signatures, expiry, budgets and
+admission limits are unchanged; the distinction is regression-tested.

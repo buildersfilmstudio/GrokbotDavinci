@@ -244,3 +244,14 @@ test("typed prepare and exact-confirm execute preserve plan and failure status",
   );
   assert.equal(jobs.length, 2);
 });
+
+
+test("rapid authorized worker restart is retryable429, expired session remains403", async () => {
+  for (const [reason, expected] of [["poll_too_fast",429],["session_expired",403]] as const) {
+    const app = createApp({session:async()=>({id:"12345678-1234-4234-8234-123456789abc",expires_at:Date.now()/1000+100}),claim:async()=>{throw Error(reason)}} as unknown as Store,cfg);
+    const grant:any=await (await app.fetch(req("/owner/session"))).json();
+    const request=req("/worker/claim",cfg.workerToken,{worker_id:"peters-mac"});request.headers.set("x-worker-session",grant.session);
+    const response=await app.fetch(request);assert.equal(response.status,expected);
+    if(expected===429)assert.equal(response.headers.get("Retry-After"),"5");
+  }
+});
