@@ -54,4 +54,4 @@ if out.exists() or out.is_symlink():
 os.umask(0o077)
 with out.open("x") as f:
     json.dump(grant, f)
-print("Private 30-minute read-only worker session saved. No capability printed.")
+print("Private 120-minute read-only worker session saved. No capability printed.")

@@ -38,8 +38,8 @@ at creation: 1,296,000 endpoint-active seconds (360h, at fixed0.25CU =90CUh),
 suspend the connector before the free allowance is exhausted. Check the live Free
 plan and caps; free quota errors are a stop condition, not permission to upgrade.
 
-Mac polling requires a signed 30-minute session, verified **before DB access**.
-Owner-only `/owner/session` reserves at most8 sessions/day (4 worker-hours/day).
+Mac polling requires a signed 120-minute session, verified **before DB access**.
+Owner-only `/owner/session` reserves at most2 sessions/day (4 worker-hours/day).
 No automatically refreshed session, public session issuance or background DB
 heartbeat. Expired/invalid worker sessions cannot query Postgres. Worker stops12s
 before expiration, polls at5s, and has no auto-start service. Session issuance and

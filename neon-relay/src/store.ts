@@ -36,7 +36,7 @@ export class Store {
       const {
         rows: [b],
       } = await c.query(
-        "INSERT INTO gbd_budget(day,sessions,client_calls) VALUES(CURRENT_DATE,1,0) ON CONFLICT(day) DO UPDATE SET sessions=gbd_budget.sessions+1 WHERE gbd_budget.sessions<8 RETURNING sessions",
+        "INSERT INTO gbd_budget(day,sessions,client_calls) VALUES(CURRENT_DATE,1,0) ON CONFLICT(day) DO UPDATE SET sessions=gbd_budget.sessions+1 WHERE gbd_budget.sessions<2 RETURNING sessions",
       );
       if (!b) throw Error("daily_session_budget_exhausted");
       await c.query(
@@ -45,7 +45,7 @@ export class Store {
       const {
         rows: [s],
       } = await c.query(
-        "INSERT INTO gbd_sessions(id,expires_at,last_claim) VALUES($1,extract(epoch from now())+1800,0) RETURNING *",
+        "INSERT INTO gbd_sessions(id,expires_at,last_claim) VALUES($1,extract(epoch from now())+7200,0) RETURNING *",
         [randomUUID()],
       );
       return s;

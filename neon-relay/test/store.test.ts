@@ -20,6 +20,10 @@ test("Postgres queue leases, expiry, completion replay, durable budget and sessi
   } as unknown as Pool);
   await assert.rejects(store.enqueue("version", {}), /session_required/);
   const s = await store.session();
+  const ttl = await db.query<{ seconds: number }>(
+    "SELECT expires_at - extract(epoch from now()) AS seconds FROM gbd_sessions WHERE id=$1", [s.id],
+  );
+  assert.ok(Number(ttl.rows[0].seconds) > 7190 && Number(ttl.rows[0].seconds) <= 7200);
   await store.clientBudget();
   const id = await store.enqueue("version", {});
   assert.equal(await store.result(id), null);
@@ -50,7 +54,7 @@ test("Postgres queue leases, expiry, completion replay, durable budget and sessi
     /expired/,
   );
   await assert.rejects(store.result(id), /expired/);
-  for (let i = 1; i < 8; i++) await store.session();
+  for (let i = 1; i < 2; i++) await store.session();
   await assert.rejects(store.session(), /budget/);
   await db.query("UPDATE gbd_budget SET client_calls=600");
   await assert.rejects(store.clientBudget(), /budget/);
