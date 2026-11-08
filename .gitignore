@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+.env*
+*.db*
+*.sqlite*
+*.pem
+*.key
+
+build/
+dist/
+
+node_modules/
+neon-relay/dist/
+.neon
+*.secret.json

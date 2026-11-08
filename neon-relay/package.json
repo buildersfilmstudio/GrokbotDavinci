@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "@hono/mcp": "^0.3.5",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@neon/functions": "^0.11.0",
+    "ajv": "^8.20.0",
+    "canonicalize": "^5.1.0",
+    "hono": "^4.13.17",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "name": "grokbot-davinci-neon",
+  "private": true,
+  "type": "module",
+  "version": "0.6.0",
+  "scripts": {
+    "test": "tsx --test test/*.test.ts",
+    "check": "tsc --noEmit",
+    "build": "esbuild src/entry.ts --bundle --platform=node --target=node24 --format=esm --banner:js=\"import { createRequire } from 'node:module';const require=createRequire(import.meta.url);\" --outfile=dist/index.mjs"
+  }
+}
