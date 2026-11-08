@@ -232,7 +232,7 @@ def main():
             raise SystemExit("Session file must be private and not a symlink")
         grant = json.loads(session_path.read_text())
         expires_at = float(grant["expires_at"])
-        if not time.time() + 12 < expires_at <= time.time() + 1801:
+        if not time.time() + 12 < expires_at <= time.time() + 7201:
             raise SystemExit("Session expired or invalid")
         headers["X-Worker-Session"] = grant["session"]
     with httpx.Client(

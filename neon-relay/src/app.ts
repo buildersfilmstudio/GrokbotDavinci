@@ -40,7 +40,7 @@ export function createApp(store: Store, cfg: Config) {
       v.worker !== cfg.workerId ||
       !Number.isFinite(v.exp) ||
       v.exp <= Date.now() / 1000 ||
-      v.exp > Date.now() / 1000 + 1801 ||
+      v.exp > Date.now() / 1000 + 7201 ||
       !z.uuid().safeParse(v.id).success
     )
       throw Error("expired_session");
